@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard TI — Chamados 2025 – 2026</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- HEADER -->
+      <header>
+        <div class="header-left">
+          <h1>Dashboard TI</h1>
+          <p class="subtitle">Chamados Concluídos · Jan 2025 — Mai 2026</p>
+        </div>
+        <div class="header-right">
+          <span class="badge">Dept. Tecnologia da Informação</span>
+          <span class="badge active">● Ao vivo</span>
+        </div>
+      </header>
+
+      <!-- KPI CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Total de Chamados</div>
+          <div class="kpi-value">3.084</div>
+          <div class="kpi-sub">Jan 2025 a Mai 2026</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Satisfação Média</div>
+          <div class="kpi-value">4,85</div>
+          <div class="kpi-sub">★★★★★ · Escala de 1 a 5</div>
+        </div>
+        <div class="kpi-card pink">
+          <div class="kpi-label">SLA — Dentro do Prazo</div>
+          <div class="kpi-value">50,9%</div>
+          <div class="kpi-sub">1.571 de 3.084 chamados</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Tempo Mediano Resolução</div>
+          <div class="kpi-value">40,5h</div>
+          <div class="kpi-sub">Da abertura à conclusão</div>
+        </div>
+      </div>
+
+      <!-- ROW 1: Evolução mensal (full) -->
+      <div
+        class="charts-grid"
+        style="grid-template-columns: 1fr; margin-bottom: 20px"
+      >
+        <div class="chart-card full">
+          <h3>Evolução Mensal de Chamados</h3>
+          <p class="chart-sub">Comparativo mês a mês · Jan 2025 — Mai 2026</p>
+          <div class="chart-wrap tall">
+            <canvas id="chartEvolucao"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Categoria + SLA -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Chamados por Categoria</h3>
+          <p class="chart-sub">Top 10 categorias por volume</p>
+          <div class="chart-wrap tall">
+            <canvas id="chartCategoria"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>SLA por Mês</h3>
+          <p class="chart-sub">% atendidos dentro do prazo</p>
+          <div class="chart-wrap tall"><canvas id="chartSLA"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ROW 3: Satisfação + Unidades -->
+      <div class="charts-grid" style="margin-top: 20px">
+        <div class="chart-card">
+          <h3>Satisfação Mensal</h3>
+          <p class="chart-sub">Nota média por mês (escala 1–5)</p>
+          <div class="chart-wrap"><canvas id="chartSat"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top 10 Unidades</h3>
+          <p class="chart-sub">Volume de chamados por unidade</p>
+          <div class="chart-wrap"><canvas id="chartUnidade"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ROW 4: Responsáveis -->
+      <div
+        class="charts-grid"
+        style="grid-template-columns: 1fr; margin-top: 20px"
+      >
+        <div class="chart-card full">
+          <h3>Performance por Responsável</h3>
+          <p class="chart-sub">
+            Volume · Nota de satisfação · Atendimentos dentro do prazo
+          </p>
+          <table class="resp-table">
+            <thead>
+              <tr>
+                <th>Responsável</th>
+                <th>Chamados</th>
+                <th>Volume</th>
+                <th>Satisfação</th>
+                <th>No Prazo</th>
+                <th>SLA %</th>
+              </tr>
+            </thead>
+            <tbody id="respBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ROW 5: Assunto detalhado -->
+      <div
+        class="charts-grid"
+        style="grid-template-columns: 1fr; margin-top: 20px"
+      >
+        <div class="chart-card full">
+          <h3>Top 12 Assuntos</h3>
+          <p class="chart-sub">Detalhamento por categoria e subcategoria</p>
+          <div class="chart-wrap" style="height: 280px">
+            <canvas id="chartAssunto"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <span
+          >Fonte: Sults · Aba <strong>Concluídos</strong> · Departamento de
+          TI</span
+        >
+        <span>Criado em <strong>Junho 2026</strong></span>
+      </footer>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
