@@ -83,80 +83,110 @@ const responsaveis = [
 ];
 
 // ── CHART DEFAULTS ────────────────────────────────────────────────────────
-Chart.defaults.color = "#8b93ab";
+Chart.defaults.color = "#7380a0";
 Chart.defaults.font.family = "'Source Sans 3', Georgia, sans-serif";
 Chart.defaults.font.size = 12;
-const grid = "rgba(0,0,0,0.05)";
+const grid = "rgba(255,255,255,0.06)";
 
 // paleta executiva
 const palette = [
-  "#1a3a6b",
-  "#2e5fa3",
+  "#7eaadf",
+  "#5d8ec7",
   "#4a7fc1",
-  "#6d9fd4",
-  "#c0392b",
-  "#1a7a5e",
-  "#b07d2a",
-  "#5a3e8a",
-  "#2e7d5e",
-  "#7a4a2b",
+  "#a0c4e8",
+  "#e07070",
+  "#52b899",
+  "#d4a84b",
+  "#9d7fd4",
+  "#6bbfa4",
+  "#d49a70",
 ];
 
-// ── 1. EVOLUÇÃO MENSAL ────────────────────────────────────────────────────
+// ── 1. EVOLUÇÃO MENSAL (Jan-Mai comparativo) ──────────────────────────────
+const mesesComp = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio"];
+const dados2025 = [11, 230, 163, 197, 201];
+const dados2026 = [200, 129, 163, 225, 229];
+
+// Inline datalabel plugin
+const datalabelPlugin = {
+  id: "datalabel",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach((bar, i) => {
+        const v = ds.data[i];
+        if (v == null) return;
+        ctx.save();
+        ctx.font = 'bold 12px "Source Sans 3", Georgia, sans-serif';
+        ctx.fillStyle = "#e8edf5";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(v, bar.x, bar.y - 4);
+        ctx.restore();
+      });
+    });
+  },
+};
+
 new Chart(document.getElementById("chartEvolucao"), {
   type: "bar",
+  plugins: [datalabelPlugin],
   data: {
-    labels: meses,
+    labels: mesesComp,
     datasets: [
       {
         label: "2025",
-        data: totalMes.map((v, i) => (i <= 11 ? v : null)),
-        backgroundColor: "rgba(26,58,107,0.70)",
-        borderColor: "#1a3a6b",
+        data: dados2025,
+        backgroundColor: "rgba(126,170,223,0.75)",
+        borderColor: "#7eaadf",
         borderWidth: 1,
         borderRadius: 4,
       },
       {
         label: "2026",
-        data: totalMes.map((v, i) => (i >= 12 ? v : null)),
-        backgroundColor: "rgba(46,95,163,0.70)",
-        borderColor: "#2e5fa3",
+        data: dados2026,
+        backgroundColor: "rgba(46,78,140,0.80)",
+        borderColor: "#2e4e8c",
         borderWidth: 1,
         borderRadius: 4,
-      },
-      {
-        label: "Tendência",
-        data: totalMes,
-        type: "line",
-        borderColor: "#c0392b",
-        borderWidth: 2,
-        pointBackgroundColor: "#c0392b",
-        pointRadius: 3,
-        tension: 0.4,
-        fill: false,
-        yAxisID: "y",
       },
     ],
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
+    layout: { padding: { top: 24 } },
     plugins: {
       legend: {
         position: "top",
-        labels: { usePointStyle: true, padding: 20, font: { size: 12 } },
+        labels: { usePointStyle: true, padding: 24, font: { size: 12 } },
       },
-      tooltip: { mode: "index", intersect: false },
+      tooltip: {
+        mode: "index",
+        intersect: false,
+        callbacks: {
+          afterBody: (items) => {
+            const a = items[0]?.parsed.y || 0;
+            const b = items[1]?.parsed.y || 0;
+            if (a && b) {
+              const diff = (((b - a) / a) * 100).toFixed(0);
+              return [`Variação: ${diff > 0 ? "+" : ""}${diff}%`];
+            }
+          },
+        },
+      },
     },
     scales: {
-      x: { grid: { color: grid }, ticks: { maxRotation: 45 } },
+      x: { grid: { color: grid } },
       y: {
         grid: { color: grid },
         beginAtZero: true,
         title: {
           display: true,
           text: "Nº de Chamados",
-          color: "#8b93ab",
+          color: "#7380a0",
           font: { size: 11 },
         },
       },
@@ -204,20 +234,20 @@ new Chart(document.getElementById("chartSLA"), {
       {
         label: "% no Prazo",
         data: slaMes,
-        borderColor: "#1a7a5e",
-        backgroundColor: "rgba(26,122,94,0.07)",
+        borderColor: "#52b899",
+        backgroundColor: "rgba(82,184,153,0.10)",
         borderWidth: 2.5,
         fill: true,
         tension: 0.4,
         pointBackgroundColor: slaMes.map((v) =>
-          v >= 60 ? "#1a7a5e" : v >= 50 ? "#2e5fa3" : "#c0392b",
+          v >= 60 ? "#52b899" : v >= 50 ? "#5d8ec7" : "#e07070",
         ),
         pointRadius: 5,
       },
       {
         label: "Meta 60%",
         data: Array(meses.length).fill(60),
-        borderColor: "rgba(192,57,43,0.45)",
+        borderColor: "rgba(224,112,112,0.50)",
         borderWidth: 1.5,
         borderDash: [6, 4],
         pointRadius: 0,
@@ -260,12 +290,12 @@ new Chart(document.getElementById("chartSat"), {
       {
         label: "Nota Média",
         data: satMes,
-        borderColor: "#b07d2a",
-        backgroundColor: "rgba(176,125,42,0.07)",
+        borderColor: "#d4a84b",
+        backgroundColor: "rgba(212,168,75,0.10)",
         borderWidth: 2.5,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: "#b07d2a",
+        pointBackgroundColor: "#d4a84b",
         pointRadius: 4,
       },
     ],
@@ -339,8 +369,8 @@ new Chart(document.getElementById("chartAssunto"), {
       {
         label: "Chamados",
         data: assuntoTotais,
-        backgroundColor: "rgba(26,58,107,0.65)",
-        borderColor: "#1a3a6b",
+        backgroundColor: "rgba(126,170,223,0.55)",
+        borderColor: "#7eaadf",
         borderWidth: 1,
         borderRadius: 4,
       },
