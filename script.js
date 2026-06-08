@@ -1,4 +1,4 @@
-// ──── DATA ────────────────────────────────────────────────────────────────
+// ── DATA ─────────────────────────────────────────────────────────────────
 const meses = [
   "Jan/25",
   "Fev/25",
@@ -30,7 +30,6 @@ const satMes = [
   5.0, 4.87, 4.87, 4.88, 4.87, 4.88, 4.83, 4.9, 4.78, 4.81, 4.72, 4.69, 4.9,
   4.79, 4.91, 4.89, 4.91,
 ];
-
 const categorias = [
   "Acesso",
   "Suporte",
@@ -44,7 +43,6 @@ const categorias = [
   "Sults",
 ];
 const catTotais = [1122, 774, 232, 213, 195, 126, 90, 73, 47, 43];
-
 const unidades = [
   "Fast Sistemas",
   "Ramos",
@@ -52,13 +50,12 @@ const unidades = [
   "Realengo-RJ",
   "Curicica",
   "Juiz de Fora",
-  "Caxias/Jd Primavera",
+  "Caxias/Jd Prim.",
   "Feira de Santana",
   "Nova Iguaçu",
   "Centro RJ",
 ];
 const uniTotais = [1972, 74, 68, 58, 57, 56, 52, 50, 48, 47];
-
 const assuntos = [
   "Acesso > SAP",
   "Acesso > E-mail",
@@ -66,7 +63,7 @@ const assuntos = [
   "Acesso > Sults",
   "Suporte > Software",
   "Suporte > Notebook/Desktop",
-  "E-mail > Config. E-mail",
+  "E-mail > Config. de E-mail",
   "PipeRun > Suporte",
   "Suporte > Hardware",
   "Impressora > Reparo",
@@ -74,7 +71,6 @@ const assuntos = [
   "PipeRun > Suporte PipeRun",
 ];
 const assuntoTotais = [435, 402, 273, 179, 171, 163, 121, 120, 107, 94, 92, 88];
-
 const responsaveis = [
   { nome: "Wiclem Lopes", total: 1055, nota: 4.84, noPrazo: 596 },
   { nome: "Marcos Barros", total: 906, nota: 4.89, noPrazo: 492 },
@@ -86,38 +82,55 @@ const responsaveis = [
   { nome: "Plinio Bellas", total: 7, nota: 5.0, noPrazo: 1 },
 ];
 
-// ──── CHART DEFAULTS ──────────────────────────────────────────────────────
-Chart.defaults.color = "#6b7494";
-Chart.defaults.font.family = "'DM Sans', sans-serif";
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────
+Chart.defaults.color = "#8b93ab";
+Chart.defaults.font.family = "'Source Sans 3', Georgia, sans-serif";
 Chart.defaults.font.size = 12;
+const grid = "rgba(0,0,0,0.05)";
 
-const gridColor = "rgba(255,255,255,0.04)";
+// paleta executiva
+const palette = [
+  "#1a3a6b",
+  "#2e5fa3",
+  "#4a7fc1",
+  "#6d9fd4",
+  "#c0392b",
+  "#1a7a5e",
+  "#b07d2a",
+  "#5a3e8a",
+  "#2e7d5e",
+  "#7a4a2b",
+];
 
-// ──── 1. EVOLUÇÃO MENSAL ──────────────────────────────────────────────────
+// ── 1. EVOLUÇÃO MENSAL ────────────────────────────────────────────────────
 new Chart(document.getElementById("chartEvolucao"), {
   type: "bar",
   data: {
     labels: meses,
     datasets: [
       {
-        label: "Chamados",
-        data: totalMes,
-        backgroundColor: meses.map((m) =>
-          m.includes("/26") ? "rgba(124,90,247,0.75)" : "rgba(79,142,247,0.65)",
-        ),
-        borderColor: meses.map((m) =>
-          m.includes("/26") ? "#7c5af7" : "#4f8ef7",
-        ),
+        label: "2025",
+        data: totalMes.map((v, i) => (i <= 11 ? v : null)),
+        backgroundColor: "rgba(26,58,107,0.70)",
+        borderColor: "#1a3a6b",
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: 4,
+      },
+      {
+        label: "2026",
+        data: totalMes.map((v, i) => (i >= 12 ? v : null)),
+        backgroundColor: "rgba(46,95,163,0.70)",
+        borderColor: "#2e5fa3",
+        borderWidth: 1,
+        borderRadius: 4,
       },
       {
         label: "Tendência",
         data: totalMes,
         type: "line",
-        borderColor: "#f75a8e",
+        borderColor: "#c0392b",
         borderWidth: 2,
-        pointBackgroundColor: "#f75a8e",
+        pointBackgroundColor: "#c0392b",
         pointRadius: 3,
         tension: 0.4,
         fill: false,
@@ -133,36 +146,25 @@ new Chart(document.getElementById("chartEvolucao"), {
         position: "top",
         labels: { usePointStyle: true, padding: 20, font: { size: 12 } },
       },
-      tooltip: {
-        mode: "index",
-        intersect: false,
-        callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y}` },
-      },
+      tooltip: { mode: "index", intersect: false },
     },
     scales: {
-      x: { grid: { color: gridColor }, ticks: { maxRotation: 45 } },
+      x: { grid: { color: grid }, ticks: { maxRotation: 45 } },
       y: {
-        grid: { color: gridColor },
+        grid: { color: grid },
         beginAtZero: true,
-        title: { display: true, text: "Nº de Chamados", color: "#6b7494" },
+        title: {
+          display: true,
+          text: "Nº de Chamados",
+          color: "#8b93ab",
+          font: { size: 11 },
+        },
       },
     },
   },
 });
 
-// ──── 2. CATEGORIAS ───────────────────────────────────────────────────────
-const catColors = [
-  "#4f8ef7",
-  "#7c5af7",
-  "#f75a8e",
-  "#28d4a0",
-  "#f7a83a",
-  "#4fdbf7",
-  "#b0f74f",
-  "#f74fc0",
-  "#4ff79e",
-  "#f7674f",
-];
+// ── 2. CATEGORIAS ─────────────────────────────────────────────────────────
 new Chart(document.getElementById("chartCategoria"), {
   type: "bar",
   data: {
@@ -171,10 +173,10 @@ new Chart(document.getElementById("chartCategoria"), {
       {
         label: "Chamados",
         data: catTotais,
-        backgroundColor: catColors.map((c) => c + "b0"),
-        borderColor: catColors,
+        backgroundColor: palette.map((c) => c + "cc"),
+        borderColor: palette,
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: 4,
       },
     ],
   },
@@ -187,13 +189,13 @@ new Chart(document.getElementById("chartCategoria"), {
       tooltip: { callbacks: { label: (ctx) => ` ${ctx.parsed.x} chamados` } },
     },
     scales: {
-      x: { grid: { color: gridColor }, beginAtZero: true },
+      x: { grid: { color: grid }, beginAtZero: true },
       y: { grid: { display: false }, ticks: { font: { size: 11 } } },
     },
   },
 });
 
-// ──── 3. SLA POR MÊS ─────────────────────────────────────────────────────
+// ── 3. SLA ────────────────────────────────────────────────────────────────
 new Chart(document.getElementById("chartSLA"), {
   type: "line",
   data: {
@@ -202,20 +204,20 @@ new Chart(document.getElementById("chartSLA"), {
       {
         label: "% no Prazo",
         data: slaMes,
-        borderColor: "#28d4a0",
-        backgroundColor: "rgba(40,212,160,0.08)",
+        borderColor: "#1a7a5e",
+        backgroundColor: "rgba(26,122,94,0.07)",
         borderWidth: 2.5,
         fill: true,
         tension: 0.4,
         pointBackgroundColor: slaMes.map((v) =>
-          v >= 60 ? "#28d4a0" : v >= 50 ? "#4f8ef7" : "#f75a8e",
+          v >= 60 ? "#1a7a5e" : v >= 50 ? "#2e5fa3" : "#c0392b",
         ),
         pointRadius: 5,
       },
       {
         label: "Meta 60%",
         data: Array(meses.length).fill(60),
-        borderColor: "rgba(247,90,142,0.4)",
+        borderColor: "rgba(192,57,43,0.45)",
         borderWidth: 1.5,
         borderDash: [6, 4],
         pointRadius: 0,
@@ -236,11 +238,11 @@ new Chart(document.getElementById("chartSLA"), {
     },
     scales: {
       x: {
-        grid: { color: gridColor },
+        grid: { color: grid },
         ticks: { maxRotation: 45, font: { size: 10 } },
       },
       y: {
-        grid: { color: gridColor },
+        grid: { color: grid },
         min: 30,
         max: 80,
         ticks: { callback: (v) => v + "%" },
@@ -249,7 +251,7 @@ new Chart(document.getElementById("chartSLA"), {
   },
 });
 
-// ──── 4. SATISFAÇÃO MENSAL ────────────────────────────────────────────────
+// ── 4. SATISFAÇÃO ─────────────────────────────────────────────────────────
 new Chart(document.getElementById("chartSat"), {
   type: "line",
   data: {
@@ -258,12 +260,12 @@ new Chart(document.getElementById("chartSat"), {
       {
         label: "Nota Média",
         data: satMes,
-        borderColor: "#f7a83a",
-        backgroundColor: "rgba(247,168,58,0.08)",
+        borderColor: "#b07d2a",
+        backgroundColor: "rgba(176,125,42,0.07)",
         borderWidth: 2.5,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: "#f7a83a",
+        pointBackgroundColor: "#b07d2a",
         pointRadius: 4,
       },
     ],
@@ -279,11 +281,11 @@ new Chart(document.getElementById("chartSat"), {
     },
     scales: {
       x: {
-        grid: { color: gridColor },
+        grid: { color: grid },
         ticks: { maxRotation: 45, font: { size: 10 } },
       },
       y: {
-        grid: { color: gridColor },
+        grid: { color: grid },
         min: 4.5,
         max: 5.1,
         ticks: { callback: (v) => v.toFixed(1) },
@@ -292,7 +294,7 @@ new Chart(document.getElementById("chartSat"), {
   },
 });
 
-// ──── 5. TOP UNIDADES ─────────────────────────────────────────────────────
+// ── 5. UNIDADES ───────────────────────────────────────────────────────────
 new Chart(document.getElementById("chartUnidade"), {
   type: "doughnut",
   data: {
@@ -300,21 +302,10 @@ new Chart(document.getElementById("chartUnidade"), {
     datasets: [
       {
         data: uniTotais,
-        backgroundColor: [
-          "#4f8ef7",
-          "#7c5af7",
-          "#f75a8e",
-          "#28d4a0",
-          "#f7a83a",
-          "#4fdbf7",
-          "#b0f74f",
-          "#f74fc0",
-          "#4ff79e",
-          "#f7674f",
-        ],
-        borderColor: "#141720",
-        borderWidth: 3,
-        hoverOffset: 8,
+        backgroundColor: palette,
+        borderColor: "#ffffff",
+        borderWidth: 2,
+        hoverOffset: 6,
       },
     ],
   },
@@ -326,7 +317,7 @@ new Chart(document.getElementById("chartUnidade"), {
         position: "right",
         labels: {
           usePointStyle: true,
-          padding: 12,
+          padding: 10,
           font: { size: 10 },
           boxWidth: 8,
         },
@@ -335,11 +326,11 @@ new Chart(document.getElementById("chartUnidade"), {
         callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}` },
       },
     },
-    cutout: "62%",
+    cutout: "60%",
   },
 });
 
-// ──── 6. ASSUNTOS ─────────────────────────────────────────────────────────
+// ── 6. ASSUNTOS ───────────────────────────────────────────────────────────
 new Chart(document.getElementById("chartAssunto"), {
   type: "bar",
   data: {
@@ -348,10 +339,10 @@ new Chart(document.getElementById("chartAssunto"), {
       {
         label: "Chamados",
         data: assuntoTotais,
-        backgroundColor: "rgba(79,142,247,0.6)",
-        borderColor: "#4f8ef7",
+        backgroundColor: "rgba(26,58,107,0.65)",
+        borderColor: "#1a3a6b",
         borderWidth: 1,
-        borderRadius: 5,
+        borderRadius: 4,
       },
     ],
   },
@@ -361,15 +352,15 @@ new Chart(document.getElementById("chartAssunto"), {
     plugins: { legend: { display: false } },
     scales: {
       x: {
-        grid: { color: gridColor },
+        grid: { color: grid },
         ticks: { maxRotation: 40, font: { size: 10 } },
       },
-      y: { grid: { color: gridColor }, beginAtZero: true },
+      y: { grid: { color: grid }, beginAtZero: true },
     },
   },
 });
 
-// ──── 7. TABELA RESPONSÁVEIS ──────────────────────────────────────────────
+// ── TABELA RESPONSÁVEIS ───────────────────────────────────────────────────
 const maxTotal = Math.max(...responsaveis.map((r) => r.total));
 const tbody = document.getElementById("respBody");
 responsaveis.forEach((r) => {
@@ -388,7 +379,7 @@ responsaveis.forEach((r) => {
         <div class="mini-bar-wrap"><div class="mini-bar" style="width:${barW}%"></div></div>
       </td>
       <td class="star-cell">${stars} <span style="color:var(--muted);font-size:11px;">${r.nota.toFixed(2)}</span></td>
-      <td>${r.noPrazo}</td>
+      <td style="color:var(--text2)">${r.noPrazo}</td>
       <td><span class="sla-badge ${slaCls}">${pct}%</span></td>
     </tr>
   `,
