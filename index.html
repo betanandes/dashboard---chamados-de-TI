@@ -3,55 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chamados — TI | 2025–2026</title>
+    <title>Chamados — TI | Comparativo Jan-Mai (2025 x 2026)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=500;600;700&family=Source+Sans+3:wght=300;400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
     <div class="container">
-      <!-- HEADER -->
       <header>
         <div class="header-left">
           <h1>Dashboard de Chamados — TI</h1>
           <p class="subtitle">
-            Departamento de Tecnologia da Informação · Janeiro 2025 – Maio 2026
+            Análise Comparativa de Desempenho · Janeiro a Maio (2025 vs 2026)
           </p>
         </div>
         <div class="header-right">
           <span class="badge">Fonte: Sults</span>
-          <span class="badge active">Chamados Concluídos</span>
+          <span class="badge active">Filtro Amostral: 1.979 Chamados</span>
         </div>
       </header>
 
-      <!-- KPI CARDS -->
       <div class="kpi-grid">
         <div class="kpi-card blue">
-          <div class="kpi-label">Total de Chamados</div>
-          <div class="kpi-value">3.084</div>
-          <div class="kpi-sub">Jan 2025 a Mai 2026</div>
+          <div class="kpi-label">Volume Total (Jan-Mai)</div>
+          <div class="kpi-value">1.979</div>
+          <div class="kpi-sub">
+            <strong>1.031</strong> em 2025 · <strong>948</strong> em 2026
+          </div>
         </div>
         <div class="kpi-card blue2">
           <div class="kpi-label">Satisfação Média</div>
-          <div class="kpi-value">4,85</div>
-          <div class="kpi-sub">2.023 avaliados · 65,6% dos chamados</div>
+          <div class="kpi-value">4,87</div>
+          <div class="kpi-sub">Estável em ambos os períodos</div>
         </div>
         <div class="kpi-card red">
-          <div class="kpi-label">SLA — Dentro do Prazo</div>
-          <div class="kpi-value">50,9%</div>
-          <div class="kpi-sub">1.571 de 3.084 · ver análise abaixo</div>
+          <div class="kpi-label">SLA Global do Período</div>
+          <div class="kpi-value">50,4%</div>
+          <div class="kpi-sub">Dentro do prazo estipulado</div>
         </div>
         <div class="kpi-card green">
           <div class="kpi-label">Tempo Mediano Resolução</div>
           <div class="kpi-value">40,5h</div>
-          <div class="kpi-sub">Da abertura à conclusão</div>
+          <div class="kpi-sub">Média móvel de atendimento</div>
         </div>
       </div>
 
-      <!-- EVOLUÇÃO MENSAL -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr"
@@ -59,23 +58,21 @@
       >
         <div class="chart-card full" style="padding: 0; overflow: hidden">
           <div style="display: flex; gap: 0">
-            <!-- Gráfico lado esquerdo -->
             <div style="flex: 1; padding: 24px 26px">
               <h3>Volume de Chamados por Mês</h3>
               <div class="chart-divider"></div>
               <p class="chart-sub">
-                Comparativo Janeiro–Maio · 2025 vs 2026 · com rótulos de valor
+                Comparativo direto sazonal (Janeiro a Maio)
               </p>
               <div class="chart-wrap" style="height: 320px">
                 <canvas id="chartEvolucao"></canvas>
               </div>
             </div>
 
-            <!-- Análise lado direito -->
             <div
               style="
-                width: 280px;
-                min-width: 260px;
+                width: 290px;
+                min-width: 270px;
                 background: var(--surface2);
                 border-left: 1px solid var(--border);
                 padding: 24px 22px;
@@ -93,7 +90,7 @@
                   margin-bottom: 8px;
                 "
               >
-                Análise
+                Análise Operacional
               </div>
               <div class="chart-divider"></div>
               <div
@@ -107,36 +104,23 @@
                 "
               >
                 <p>
-                  <strong style="color: var(--text)">Total Jan–Mai:</strong>
-                  1.032 (2025) contra 946 (2026), recuo de 8,3%.
+                  <strong style="color: var(--text)"
+                    >Retração Volumétrica:</strong
+                  >
+                  O acumulado do primeiro trimestre aponta uma queda de demandas
+                  em 2026, indicando maior estabilização nos sistemas centrais.
                 </p>
                 <p>
-                  A retração se concentra em
-                  <strong style="color: var(--accent)"
-                    >janeiro e fevereiro</strong
-                  >
-                  — fevereiro caiu de 230 para 129 chamados
-                  <span style="color: var(--red)">(-44%)</span>.
+                  O mês de
+                  <strong style="color: var(--accent)">Fevereiro</strong> foi o
+                  marco de maior redução do período comparado, caindo de 230
+                  para apenas 129 ordens abertas.
                 </p>
                 <p>
-                  A partir de março a tendência se inverte:
-                  <strong style="color: var(--green)"
-                    >abril (+14%) e maio (+14%)</strong
-                  >
-                  já superam 2025.
-                </p>
-                <p
-                  style="
-                    color: var(--muted);
-                    font-size: 11.5px;
-                    border-top: 1px solid var(--border);
-                    padding-top: 10px;
-                    margin-top: 4px;
-                  "
-                >
-                  Leitura: menos problemas recorrentes no início do ano, mas
-                  demanda voltando a crescer no fim do período. Vale monitorar
-                  se a alta de abril/maio se mantém.
+                  Em contrapartida, as atividades reaqueceram de forma acentuada
+                  a partir de
+                  <strong style="color: var(--green)">Abril e Maio</strong>,
+                  onde o ano de 2026 assumiu o pico de volumetria.
                 </p>
               </div>
             </div>
@@ -144,95 +128,69 @@
         </div>
       </div>
 
-      <!-- CATEGORIA + SLA -->
       <div class="charts-grid">
         <div class="chart-card">
-          <h3>Chamados por Categoria</h3>
+          <h3>Categorias: 2025 vs 2026</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">Top 10 categorias por volume total</p>
+          <p class="chart-sub">
+            Comparativo de volumetria das principais frentes
+          </p>
           <div class="chart-wrap tall">
             <canvas id="chartCategoria"></canvas>
           </div>
         </div>
         <div class="chart-card">
-          <h3>SLA — % Atendidos no Prazo</h3>
+          <h3>SLA por Mês: 2025 vs 2026</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">Evolução mensal · referência de meta em 60%</p>
-          <div class="chart-wrap" style="height: 240px">
+          <p class="chart-sub">
+            % de cumprimento de prazo comparado com a Meta (60%)
+          </p>
+          <div class="chart-wrap" style="height: 310px">
             <canvas id="chartSLA"></canvas>
           </div>
-          <div
-            style="
-              margin-top: 14px;
-              padding: 12px 14px;
-              background: var(--surface2);
-              border-radius: 5px;
-              border-left: 3px solid var(--accent3);
-            "
-          >
-            <div
-              style="
-                font-size: 11px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.8px;
-                color: var(--accent3);
-                margin-bottom: 6px;
-              "
-            >
-              ⚠ Por que o SLA está abaixo de 60%?
-            </div>
-            <div
-              style="font-size: 12px; color: var(--text2); line-height: 1.65"
-            >
-              897 chamados (29%) tiveram
-              <strong style="color: var(--text)">prazo ≤ 24h</strong> — desses,
-              apenas 38% foram concluídos a tempo. Prazos muito curtos no
-              sistema inflacionam as falhas. Chamados com prazo &gt; 24h atingem
-              <strong style="color: var(--green)">55–57%</strong> de
-              cumprimento. Recomendação: revisar a parametrização de prazos no
-              Sults.
-            </div>
+        </div>
+      </div>
+
+      <div class="charts-grid" style="margin-top: 0">
+        <div class="chart-card">
+          <h3>Evolução da Satisfação Média</h3>
+          <div class="chart-divider"></div>
+          <p class="chart-sub">
+            Comparativo das notas fiscais/atendimento entre os períodos
+          </p>
+          <div class="chart-wrap" style="height: 250px">
+            <canvas id="chartSat"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>Top Unidades: Demanda Comparada</h3>
+          <div class="chart-divider"></div>
+          <p class="chart-sub">Principais filiais demandantes do período</p>
+          <div class="chart-wrap" style="height: 250px">
+            <canvas id="chartUnidade"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- SATISFAÇÃO + UNIDADES -->
-      <div class="charts-grid" style="margin-top: 0">
-        <div class="chart-card">
-          <h3>Satisfação Mensal Média</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub">Nota média por mês · escala de 1 a 5</p>
-          <div class="chart-wrap"><canvas id="chartSat"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h3>Top 10 Unidades por Volume</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub">Distribuição de chamados por unidade</p>
-          <div class="chart-wrap"><canvas id="chartUnidade"></canvas></div>
-        </div>
-      </div>
-
-      <!-- TABELA RESPONSÁVEIS -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr; margin-top: 0"
       >
         <div class="chart-card full">
-          <h3>Performance por Responsável</h3>
+          <h3>Performance da Equipe de TI (Consolidado Jan-Mai)</h3>
           <div class="chart-divider"></div>
           <p class="chart-sub">
-            Volume de chamados · satisfação · atendimentos dentro do prazo
+            Métricas agregadas dos atendimentos nos períodos selecionados
           </p>
           <table class="resp-table">
             <thead>
               <tr>
                 <th>Responsável</th>
-                <th>Chamados</th>
+                <th>Chamados Totais</th>
                 <th>Volume Relativo</th>
-                <th>Satisfação</th>
+                <th>Média Satisfação</th>
                 <th>No Prazo</th>
-                <th>SLA %</th>
+                <th>SLA Real %</th>
               </tr>
             </thead>
             <tbody id="respBody"></tbody>
@@ -240,25 +198,27 @@
         </div>
       </div>
 
-      <!-- TOP 12 ASSUNTOS -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr; margin-top: 0"
       >
         <div class="chart-card full">
-          <h3>Top 12 Assuntos Mais Frequentes</h3>
+          <h3>Top Assuntos Mais Recorrentes: 2025 vs 2026</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">Detalhamento por categoria e subcategoria</p>
+          <p class="chart-sub">Subcategorias detalhadas lado a lado</p>
           <div class="chart-wrap xtra"><canvas id="chartAssunto"></canvas></div>
         </div>
       </div>
 
       <footer>
         <span
-          >Fonte dos dados: <strong>Sults</strong> · Aba
-          <strong>Concluídos</strong> · Tecnologia da Informação</span
+          >Fonte dos dados estruturados:
+          <strong>Sults Corporativo</strong></span
         >
-        <span>Gerado em <strong>Junho de 2026</strong></span>
+        <span
+          >Escopo analítico:
+          <strong>Janeiro a Maio (2025 vs 2026)</strong></span
+        >
       </footer>
     </div>
 
