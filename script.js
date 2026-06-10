@@ -46,87 +46,26 @@ const uni2026 = [610, 22, 19, 18, 16, 15, 14];
 // ── ASSUNTOS: agrupados por categoria-mãe ───────────────────────────────
 // Estrutura: { grupo, label, v2025, v2026 }
 // Um item com v2025=null e v2026=null é separador de grupo
+// ── ASSUNTOS: top 10 ordenado por total (2025+2026) decrescente ──────────
 const assuntosRaw = [
-  // ACESSO
-  {
-    grupo: "Acesso",
-    label: "Acesso › Novos Colaboradores",
-    v2025: 104,
-    v2026: 218,
-  },
-  {
-    grupo: "Acesso",
-    label: "Acesso › E-mail / Configuração",
-    v2025: 232,
-    v2026: 124,
-  },
-  { grupo: "Acesso", label: "Acesso › Sults", v2025: 44, v2026: 153 },
-  { grupo: "Acesso", label: "Acesso › SAP", v2025: 157, v2026: 139 },
-  // INFRAESTRUTURA
-  { grupo: "Infra", label: "Infra › Problemas Físicos", v2025: 73, v2026: 127 },
-  // SUPORTE
-  {
-    grupo: "Suporte",
-    label: "Suporte › Programas Diversos",
-    v2025: 81,
-    v2026: 93,
-  },
-  {
-    grupo: "Suporte",
-    label: "Suporte › Notebook / Desktop",
-    v2025: 45,
-    v2026: 65,
-  },
-  { grupo: "Suporte", label: "Suporte › Software", v2025: 66, v2026: 41 },
-  {
-    grupo: "Suporte",
-    label: "Suporte › Rede / Internet",
-    v2025: 14,
-    v2026: 11,
-  },
-  // IMPRESSORA
-  {
-    grupo: "Impressora",
-    label: "Impressora › Instalação / Toner",
-    v2025: 80,
-    v2026: 77,
-  },
-  // PIPERUN
-  {
-    grupo: "PipeRun",
-    label: "PipeRun › Acesso e Suporte",
-    v2025: 52,
-    v2026: 69,
-  },
-  // SHOP 9
-  {
-    grupo: "Shop 9",
-    label: "Shop 9 › Acessos / Certificados",
-    v2025: 16,
-    v2026: 25,
-  },
-  // TELEFONIA
-  { grupo: "Telefonia", label: "Telefonia › Nova linha", v2025: 12, v2026: 10 },
-  // OUTROS
-  { grupo: "Outros", label: "Banco de Dados › SQL", v2025: 10, v2026: 9 },
-  { grupo: "Outros", label: "Drive de rede", v2025: 6, v2026: 5 },
+  { label: "Acesso › Novos Colaboradores", v2025: 104, v2026: 218 },
+  { label: "Acesso › E-mail / Configuração", v2025: 232, v2026: 124 },
+  { label: "Acesso › SAP", v2025: 157, v2026: 139 },
+  { label: "Infra › Problemas Físicos", v2025: 73, v2026: 127 },
+  { label: "Acesso › Sults", v2025: 44, v2026: 153 },
+  { label: "Suporte › Programas Diversos", v2025: 81, v2026: 93 },
+  { label: "Impressora › Instalação / Toner", v2025: 80, v2026: 77 },
+  { label: "PipeRun › Acesso e Suporte", v2025: 52, v2026: 69 },
+  { label: "Suporte › Notebook / Desktop", v2025: 45, v2026: 65 },
+  { label: "Suporte › Software", v2025: 66, v2026: 41 },
 ];
+
+// Ordenar por total decrescente — maior total no topo
+assuntosRaw.sort((a, b) => b.v2025 + b.v2026 - (a.v2025 + a.v2026));
 
 const assLabels = assuntosRaw.map((a) => a.label);
 const ass2025 = assuntosRaw.map((a) => a.v2025);
 const ass2026 = assuntosRaw.map((a) => a.v2026);
-
-// Cores por grupo para identificação visual
-const grupoColors = {
-  Acesso: { c25: "rgba(74,127,193,0.75)", c26: "#2e4e8c" },
-  Infra: { c25: "rgba(160,100,200,0.75)", c26: "#7b3fa0" },
-  Suporte: { c25: "rgba(82,184,153,0.75)", c26: "#1a7a5e" },
-  Impressora: { c25: "rgba(208,152,60,0.75)", c26: "#b07d2a" },
-  PipeRun: { c25: "rgba(224,112,112,0.75)", c26: "#c0392b" },
-  "Shop 9": { c25: "rgba(100,160,100,0.75)", c26: "#2e7d32" },
-  Telefonia: { c25: "rgba(120,120,180,0.75)", c26: "#3949ab" },
-  Outros: { c25: "rgba(160,160,160,0.75)", c26: "#607080" },
-};
 
 // ── RESPONSÁVEIS ────────────────────────────────────────────────────────
 const responsaveis = [
@@ -315,10 +254,11 @@ new Chart(document.getElementById("chartSLA"), {
         pointBackgroundColor: "#52b899",
       },
       {
-        label: "Meta 60%",
-        data: Array(5).fill(60),
-        borderColor: "rgba(224,112,112,0.45)",
-        borderDash: [6, 6],
+        label: "Meta 90%",
+        data: Array(5).fill(90),
+        borderColor: "#f0c040",
+        backgroundColor: "transparent",
+        borderWidth: 2,
         pointRadius: 0,
       },
     ],
@@ -326,6 +266,7 @@ new Chart(document.getElementById("chartSLA"), {
   options: {
     responsive: true,
     maintainAspectRatio: false,
+    layout: { padding: { top: 20, bottom: 10 } },
     plugins: { legend: { position: "top" } },
     scales: {
       x: { grid: { display: false } },
@@ -353,10 +294,8 @@ new Chart(document.getElementById("chartSLA"), {
             const v = vals[i];
             const isMin = v === minV;
             const label = v.toFixed(1) + "%";
-
-            // Posição: mínimos ficam abaixo, demais acima
             const above = !isMin;
-            const yPos = above ? point.y - 14 : point.y + 14;
+            const yPos = above ? point.y - 20 : point.y + 20;
 
             ctx.save();
 
@@ -480,15 +419,7 @@ new Chart(document.getElementById("chartSat"), {
   ],
 });
 
-// ── 5. ASSUNTOS (agrupado por categoria-mãe, rótulos em linha única) ─────
-// Cores por linha (baseadas no grupo de cada assunto)
-const assColors25 = assuntosRaw.map(
-  (a) => grupoColors[a.grupo]?.c25 || "rgba(74,127,193,0.75)",
-);
-const assColors26 = assuntosRaw.map(
-  (a) => grupoColors[a.grupo]?.c26 || "#2e4e8c",
-);
-
+// ── 5. ASSUNTOS — top 10, barras verticais, valores no topo ──────────────
 new Chart(document.getElementById("chartAssunto"), {
   type: "bar",
   plugins: [smartDatalabelPlugin],
@@ -498,26 +429,21 @@ new Chart(document.getElementById("chartAssunto"), {
       {
         label: "Ano 2025",
         data: ass2025,
-        backgroundColor: assColors25,
+        backgroundColor: "rgba(74,127,193,0.75)",
         borderRadius: 3,
-        barThickness: 13,
-        categoryPercentage: 0.75,
       },
       {
         label: "Ano 2026",
         data: ass2026,
-        backgroundColor: assColors26,
+        backgroundColor: "#2e4e8c",
         borderRadius: 3,
-        barThickness: 13,
-        categoryPercentage: 0.75,
       },
     ],
   },
   options: {
-    indexAxis: "y",
     responsive: true,
     maintainAspectRatio: false,
-    layout: { padding: { right: 20 } },
+    layout: { padding: { top: 24 } },
     plugins: {
       legend: { position: "top" },
       tooltip: {
@@ -534,15 +460,11 @@ new Chart(document.getElementById("chartAssunto"), {
       },
     },
     scales: {
-      x: { grid: { color: grid }, beginAtZero: true, grace: "8%" },
-      y: {
+      x: {
         grid: { display: false },
-        ticks: {
-          font: { size: 11, weight: "600" },
-          color: "#1e293b",
-          maxRotation: 0,
-        },
+        ticks: { font: { size: 10 }, maxRotation: 30, minRotation: 20 },
       },
+      y: { grid: { color: grid }, beginAtZero: true },
     },
   },
 });
