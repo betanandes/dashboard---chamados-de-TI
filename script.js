@@ -302,7 +302,8 @@ new Chart(document.getElementById("chartSLA"), {
         backgroundColor: "transparent",
         borderWidth: 2.5,
         tension: 0.2,
-        pointRadius: 3,
+        pointRadius: 4,
+        pointBackgroundColor: "#7eaadf",
       },
       {
         label: "SLA 2026",
@@ -311,12 +312,13 @@ new Chart(document.getElementById("chartSLA"), {
         backgroundColor: "transparent",
         borderWidth: 2.5,
         tension: 0.2,
-        pointRadius: 3,
+        pointRadius: 4,
+        pointBackgroundColor: "#52b899",
       },
       {
         label: "Meta 60%",
         data: Array(5).fill(60),
-        borderColor: "rgba(224,112,112,0.35)",
+        borderColor: "rgba(224,112,112,0.45)",
         borderDash: [6, 6],
         pointRadius: 0,
       },
@@ -336,6 +338,57 @@ new Chart(document.getElementById("chartSLA"), {
       },
     },
   },
+  plugins: [
+    {
+      id: "slaAnnotation",
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        // Só anotar datasets 0 (2025) e 1 (2026), não a linha de meta
+        [0, 1].forEach((di) => {
+          const ds = chart.data.datasets[di];
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          const vals = ds.data;
+          const minV = Math.min(...vals);
+          meta.data.forEach((point, i) => {
+            const v = vals[i];
+            const isMin = v === minV;
+            const label = v.toFixed(1) + "%";
+
+            // Posição: mínimos ficam abaixo, demais acima
+            const above = !isMin;
+            const yPos = above ? point.y - 14 : point.y + 14;
+
+            ctx.save();
+
+            // Pill de fundo suave
+            const tw = ctx.measureText(label).width + 10;
+            const th = 14;
+            const rx = point.x - tw / 2;
+            const ry = yPos - th / 2;
+            const pillColor = isMin
+              ? "rgba(192,57,43,0.10)"
+              : di === 0
+                ? "rgba(126,170,223,0.12)"
+                : "rgba(82,184,153,0.12)";
+            ctx.fillStyle = pillColor;
+            ctx.beginPath();
+            ctx.roundRect(rx, ry, tw, th, 4);
+            ctx.fill();
+
+            // Texto
+            ctx.font = 'bold 10px "Source Sans 3", sans-serif';
+            ctx.fillStyle = isMin ? "#c0392b" : ds.borderColor;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(label, point.x, yPos);
+
+            ctx.restore();
+          });
+        });
+      },
+    },
+  ],
 });
 
 // ── 4. SATISFAÇÃO ────────────────────────────────────────────────────────
@@ -387,28 +440,28 @@ new Chart(document.getElementById("chartSat"), {
   },
   plugins: [
     {
-      // Anotações de pico/vale diretamente no gráfico
+      // Anotações em todos os pontos
       id: "satAnnotation",
       afterDatasetsDraw(chart) {
         const { ctx } = chart;
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
           const vals = ds.data;
-          const maxV = Math.max(...vals);
           const minV = Math.min(...vals);
           meta.data.forEach((point, i) => {
             const v = vals[i];
-            if (v !== maxV && v !== minV) return;
-            const isPeak = v === maxV;
+            const isMin = v === minV;
             ctx.save();
             ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-            ctx.fillStyle = isPeak ? "#1a7a5e" : "#c0392b";
+            ctx.fillStyle = isMin ? "#c0392b" : ds.borderColor;
             ctx.textAlign = "center";
-            ctx.textBaseline = isPeak ? "bottom" : "top";
+            // Valores mínimos ficam abaixo do ponto, demais ficam acima
+            ctx.textBaseline = isMin ? "top" : "bottom";
             ctx.fillText(
               v.toFixed(2),
               point.x,
-              isPeak ? point.y - 6 : point.y + 6,
+              isMin ? point.y + 6 : point.y - 6,
             );
             ctx.restore();
           });
