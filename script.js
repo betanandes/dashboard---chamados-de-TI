@@ -238,10 +238,10 @@ new Chart(document.getElementById("chartEvolucao"), {
   },
 });
 
-// ── 2. CATEGORIAS (horizontal, ordenado por 2026, com variação %) ────────
+// ── 2. CATEGORIAS (vertical, ordenado por 2026, valores no topo) ─────────
 new Chart(document.getElementById("chartCategoria"), {
   type: "bar",
-  plugins: [smartDatalabelPlugin, variacaoPlugin],
+  plugins: [smartDatalabelPlugin],
   data: {
     labels: categorias,
     datasets: [
@@ -260,10 +260,9 @@ new Chart(document.getElementById("chartCategoria"), {
     ],
   },
   options: {
-    indexAxis: "y",
     responsive: true,
     maintainAspectRatio: false,
-    layout: { padding: { right: 52 } },
+    layout: { padding: { top: 24 } },
     plugins: {
       legend: {
         display: true,
@@ -283,8 +282,8 @@ new Chart(document.getElementById("chartCategoria"), {
       },
     },
     scales: {
-      x: { grid: { color: grid }, beginAtZero: true },
-      y: { grid: { display: false } },
+      x: { grid: { display: false } },
+      y: { grid: { color: grid }, beginAtZero: true },
     },
   },
 });
