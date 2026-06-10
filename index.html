@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chamados — TI | Comparativo Jan-Mai (2025 x 2026)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=500;600;700&family=Source+Sans+3:wght=300;400;500;600&display=swap"
@@ -22,9 +23,43 @@
         </div>
         <div class="header-right">
           <span class="badge">Fonte: Sults</span>
-          <span class="badge active">Filtro Amostral: 1.979 Chamados</span>
+          <span class="badge active" id="filterBadge"
+            >Filtro Amostral: 1.979 Chamados</span
+          >
         </div>
       </header>
+
+      <!-- BARRA DE IMPORTAÇÃO -->
+      <div class="import-bar">
+        <div class="import-left">
+          <button id="btnImportar" class="import-btn">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="margin-right: 6px; vertical-align: -2px"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Importar Planilha Sults (.xlsx)
+          </button>
+          <input
+            type="file"
+            id="inputExcel"
+            accept=".xlsx,.xls"
+            style="display: none"
+          />
+          <span id="nomeArquivo" class="import-filename"
+            >Nenhum arquivo — exibindo dados padrão</span
+          >
+        </div>
+        <span id="statusImport" class="import-status"></span>
+      </div>
 
       <div class="kpi-grid">
         <div class="kpi-card blue">
@@ -34,13 +69,11 @@
             <strong>1.031</strong> em 2025 · <strong>948</strong> em 2026
           </div>
         </div>
-        <!-- ALTERAÇÃO 1: Satisfação com % de avaliados -->
         <div class="kpi-card blue2">
           <div class="kpi-label">Satisfação Média</div>
           <div class="kpi-value">4,87</div>
           <div class="kpi-sub">344 de 515 avaliados (66,8%)</div>
         </div>
-        <!-- ALTERAÇÃO 2: SLA atualizado para 93% com cor verde -->
         <div class="kpi-card green">
           <div class="kpi-label">SLA Global do Período</div>
           <div class="kpi-value kpi-value-sla">93,0%</div>
@@ -79,7 +112,7 @@
             gap: 10px;
           "
         >
-          Carregando inteligência analítica dos dados operacionais...
+          Carregando...
         </div>
       </div>
 
@@ -135,7 +168,7 @@
                   gap: 12px;
                 "
               >
-                Processando métricas sazonais...
+                Processando...
               </div>
             </div>
           </div>
@@ -143,7 +176,6 @@
       </div>
 
       <div class="charts-grid">
-        <!-- ALTERAÇÃO 3: Categorias com valores e ordenado por 2026 + variação % -->
         <div class="chart-card">
           <h3>Categorias: 2025 vs 2026</h3>
           <div class="chart-divider"></div>
@@ -208,17 +240,15 @@
         </div>
       </div>
 
-      <!-- ALTERAÇÃO 4: Top Assuntos com agrupamento por categoria-mãe -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr; margin-top: 0"
       >
         <div class="chart-card full">
-          <h3>Top Assuntos Mais Recorrentes: 2025 vs 2026</h3>
+          <h3>Top 10 Assuntos Mais Recorrentes: 2025 vs 2026</h3>
           <div class="chart-divider"></div>
           <p class="chart-sub">
-            Subcategorias agrupadas por categoria · variação entre períodos
-            destacada
+            Ordenado por volume total · valores no topo de cada barra
           </p>
           <div class="chart-wrap xtra" style="min-height: 380px">
             <canvas id="chartAssunto"></canvas>
@@ -237,7 +267,6 @@
         >
       </footer>
     </div>
-
     <script src="script.js"></script>
   </body>
 </html>

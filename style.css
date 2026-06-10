@@ -26,7 +26,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Aptos Narrow", Aptos, sans-serif;
+  font-family: "Source Sans 3", Georgia, sans-serif;
   min-height: 100vh;
 }
 
@@ -47,7 +47,7 @@ header {
   animation: fadeDown 0.5s ease both;
 }
 .header-left h1 {
-  font-family: "Aptos Narrow", Aptos, sans-serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-size: clamp(26px, 3.5vw, 42px);
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -124,7 +124,7 @@ header {
   margin-bottom: 10px;
 }
 .kpi-value {
-  font-family: "Aptos Narrow", Aptos, sans-serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-size: 38px;
   font-weight: 700;
   letter-spacing: -1px;
@@ -168,7 +168,7 @@ header {
   grid-column: 1 / -1;
 }
 .chart-card h3 {
-  font-family: "Aptos Narrow", Aptos, sans-serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-size: 15px;
   font-weight: 600;
   color: var(--accent);
@@ -350,4 +350,48 @@ footer strong {
   .charts-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* IMPORT BAR */
+.import-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.import-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.import-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: "Source Sans 3", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.import-btn:hover {
+  background: var(--accent2);
+}
+.import-filename {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+.import-status {
+  font-size: 12px;
+  font-weight: 500;
 }
