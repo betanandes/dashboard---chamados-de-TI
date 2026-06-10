@@ -26,7 +26,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Source Sans 3", Georgia, sans-serif;
+  font-family: "Aptos Narrow", Aptos, sans-serif;
   min-height: 100vh;
 }
 
@@ -47,7 +47,7 @@ header {
   animation: fadeDown 0.5s ease both;
 }
 .header-left h1 {
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: "Aptos Narrow", Aptos, sans-serif;
   font-size: clamp(26px, 3.5vw, 42px);
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -124,7 +124,7 @@ header {
   margin-bottom: 10px;
 }
 .kpi-value {
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: "Aptos Narrow", Aptos, sans-serif;
   font-size: 38px;
   font-weight: 700;
   letter-spacing: -1px;
@@ -139,6 +139,10 @@ header {
 }
 .kpi-card.green .kpi-value {
   color: var(--accent4);
+}
+/* SLA card value override - sempre verde */
+.kpi-value-sla {
+  color: var(--accent4) !important;
 }
 .kpi-sub {
   font-size: 12px;
@@ -164,7 +168,7 @@ header {
   grid-column: 1 / -1;
 }
 .chart-card h3 {
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: "Aptos Narrow", Aptos, sans-serif;
   font-size: 15px;
   font-weight: 600;
   color: var(--accent);
@@ -192,7 +196,24 @@ header {
   height: 300px;
 }
 .chart-wrap.xtra {
-  min-height: 620px;
+  min-height: 700px;
+}
+
+/* Legenda do gráfico de categorias (variação %) */
+.cat-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  align-items: center;
+}
+.cat-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-right: 4px;
 }
 
 /* RESPONSÁVEIS TABLE */
