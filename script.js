@@ -4,8 +4,8 @@ const mesesComp = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio"];
 const volume2025 = [241, 230, 163, 197, 201];
 const volume2026 = [200, 129, 163, 225, 229];
 
-const sla2025 = [48.2, 51.7, 44.2, 38.6, 53.2];
-const sla2026 = [53.5, 47.3, 51.7, 45.6, 48.9];
+const sla2025 = [100.0, 94.4, 94.0, 90.8, 94.0];
+const sla2026 = [100.0, 92.1, 79.2, 80.6, 96.8];
 
 const sat2025 = [4.82, 4.87, 4.87, 4.88, 4.87];
 const sat2026 = [4.89, 4.79, 4.91, 4.89, 4.91];
@@ -150,6 +150,7 @@ const smartDatalabelPlugin = {
   id: "smartDatalabel",
   afterDatasetsDraw(chart) {
     const { ctx } = chart;
+    const isHorizontal = chart.config.options.indexAxis === "y";
     chart.data.datasets.forEach((ds, di) => {
       const meta = chart.getDatasetMeta(di);
       if (meta.hidden || chart.config.type === "line") return;
@@ -157,18 +158,17 @@ const smartDatalabelPlugin = {
         const v = ds.data[i];
         if (v === 0 || v == null) return;
         ctx.save();
-        if (chart.canvas.id === "chartAssunto") {
+        if (isHorizontal) {
+          // Barras horizontais: valor à direita, cor escura
           ctx.font = 'bold 11px "Source Sans 3", sans-serif';
           ctx.fillStyle = "#1e293b";
-        } else {
-          ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-          ctx.fillStyle = "#ffffff";
-        }
-        if (chart.config.options.indexAxis === "y") {
           ctx.textAlign = "left";
           ctx.textBaseline = "middle";
           ctx.fillText(v, bar.x + 6, bar.y);
         } else {
+          // Barras verticais: valor no TOPO acima da barra, cor escura
+          ctx.font = 'bold 10px "Source Sans 3", sans-serif';
+          ctx.fillStyle = "#1e293b";
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
           ctx.fillText(v, bar.x, bar.y - 4);
@@ -332,8 +332,8 @@ new Chart(document.getElementById("chartSLA"), {
       x: { grid: { display: false } },
       y: {
         grid: { color: grid },
-        min: 30,
-        max: 70,
+        min: 60,
+        max: 105,
         ticks: { callback: (v) => v + "%" },
       },
     },
@@ -440,70 +440,48 @@ new Chart(document.getElementById("chartSat"), {
   },
   plugins: [
     {
-      // Anotações em todos os pontos
       id: "satAnnotation",
       afterDatasetsDraw(chart) {
         const { ctx } = chart;
-        chart.data.datasets.forEach((ds, di) => {
-          const meta = chart.getDatasetMeta(di);
-          if (meta.hidden) return;
-          const vals = ds.data;
-          const minV = Math.min(...vals);
-          meta.data.forEach((point, i) => {
-            const v = vals[i];
-            const isMin = v === minV;
-            ctx.save();
-            ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-            ctx.fillStyle = isMin ? "#c0392b" : ds.borderColor;
-            ctx.textAlign = "center";
-            // Valores mínimos ficam abaixo do ponto, demais ficam acima
-            ctx.textBaseline = isMin ? "top" : "bottom";
-            ctx.fillText(
-              v.toFixed(2),
-              point.x,
-              isMin ? point.y + 6 : point.y - 6,
-            );
-            ctx.restore();
-          });
-        });
+        const datasets = chart.data.datasets;
+        // ds0 = 2025 (dourado), ds1 = 2026 (azul claro)
+        const meta0 = chart.getDatasetMeta(0);
+        const meta1 = chart.getDatasetMeta(1);
+        if (meta0.hidden && meta1.hidden) return;
+
+        const drawLabel = (point, v, color, above) => {
+          const label = v.toFixed(2);
+          ctx.save();
+          ctx.font = 'bold 10px "Source Sans 3", sans-serif';
+          ctx.textAlign = "center";
+          ctx.textBaseline = above ? "bottom" : "top";
+          ctx.fillStyle = color;
+          ctx.fillText(label, point.x, above ? point.y - 6 : point.y + 6);
+          ctx.restore();
+        };
+
+        // Para cada mês, decidir posição de cada linha para evitar sobreposição
+        const n = datasets[0].data.length;
+        for (let i = 0; i < n; i++) {
+          const v0 = datasets[0].data[i]; // 2025
+          const v1 = datasets[1].data[i]; // 2026
+          const p0 = meta0.data[i];
+          const p1 = meta1.data[i];
+
+          // Linha com valor mais alto fica com label acima, mais baixo fica abaixo
+          // Se iguais, 2025 acima e 2026 abaixo
+          const c0 = datasets[0].borderColor;
+          const c1 = datasets[1].borderColor;
+
+          if (!meta0.hidden) drawLabel(p0, v0, c0, v0 >= v1);
+          if (!meta1.hidden) drawLabel(p1, v1, c1, v1 > v0);
+        }
       },
     },
   ],
 });
 
-// ── 5. UNIDADES ──────────────────────────────────────────────────────────
-new Chart(document.getElementById("chartUnidade"), {
-  type: "bar",
-  plugins: [smartDatalabelPlugin],
-  data: {
-    labels: unidades,
-    datasets: [
-      {
-        label: "2025",
-        data: uni2025,
-        backgroundColor: "#4a7fc1",
-        borderRadius: 2,
-      },
-      {
-        label: "2026",
-        data: uni2026,
-        backgroundColor: "#e07070",
-        borderRadius: 2,
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: { color: grid } },
-    },
-  },
-});
-
-// ── 6. ASSUNTOS (agrupado por categoria-mãe, rótulos em linha única) ─────
+// ── 5. ASSUNTOS (agrupado por categoria-mãe, rótulos em linha única) ─────
 // Cores por linha (baseadas no grupo de cada assunto)
 const assColors25 = assuntosRaw.map(
   (a) => grupoColors[a.grupo]?.c25 || "rgba(74,127,193,0.75)",
