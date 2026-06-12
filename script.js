@@ -208,12 +208,23 @@ async function buscarChamadosPendentes() {
 
 // ── CONCLUIR CHAMADO ──────────────────────────────────────────────────────
 async function concluirChamado(chamadoId) {
+  const body = JSON.stringify({ pessoaId: USUARIO_ID });
   const res = await fetch(`${SULTS_API}/${chamadoId}/action/conclude`, {
     method: "PUT",
-    headers,
-    body: JSON.stringify({ pessoaId: USUARIO_ID }),
+    headers: {
+      Authorization: SULTS_TOKEN,
+      "Content-Type": "application/json;charset=UTF-8",
+    },
+    body,
   });
-  if (!res.ok) throw new Error(`Erro ${res.status}: ${res.statusText}`);
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const j = await res.json();
+      msg += `: ${j.error || j.message || JSON.stringify(j)}`;
+    } catch {}
+    throw new Error(msg);
+  }
   return true;
 }
 
@@ -222,6 +233,7 @@ function processarChamados(chamados) {
   const { anoBase, anoComp, mesInicio, mesFim } = getPeriodo();
   const mesesNum = getMesesNum();
 
+  // ETAPA 1: Mapear campos da API
   const dados = chamados.map((c) => ({
     id: c.id,
     aberto: parseDate(c.aberto),
@@ -231,9 +243,11 @@ function processarChamados(chamados) {
     assunto: c.assunto?.nome || "",
     responsavel: c.responsavel?.nome || "",
     satisfacao: c.avaliacaoNota || null,
-    situacao: c.situacao,
+    situacao: c.situacao, // 1=Novo 2=Concluído 3=Resolvido 4=Em Andamento 5=Ag.Sol 6=Ag.Resp
   }));
 
+  // ETAPA 2: Filtrar pelo período selecionado (ano base E ano comparativo)
+  // Chamados sem data de abertura são descartados — único motivo de exclusão
   const filtrado = dados.filter((d) => {
     if (!d.aberto) return false;
     const ano = d.aberto.getFullYear();
@@ -244,64 +258,62 @@ function processarChamados(chamados) {
   });
   if (!filtrado.length) return null;
 
+  // ETAPA 3: Calcular SLA para cada chamado
+  // BRUTO  = concluído dentro do prazo (sem nenhum ajuste)
+  // CORRIGIDO = bruto + correções de processo acordadas
   filtrado.forEach((d) => {
     const prazoHoras =
       d.prazo && d.aberto ? (d.prazo - d.aberto) / 3600000 : null;
-    let corrigido = false;
-    if (d.concluido && d.prazo && prazoHoras >= 24 && d.concluido > d.prazo)
-      corrigido = true;
+
+    // SLA BRUTO — fórmula pura: concluído E dentro do prazo
+    d.noPrazoBruto = !!(d.concluido && d.prazo && d.concluido <= d.prazo);
+
+    // SLA CORRIGIDO — aplica correções de processo acordadas em reunião
+    // Cada correção justifica por que o chamado é tratado como "no prazo"
+    let motivo = null;
+
+    // G1: Prazo cadastrado com menos de 24h — erro de configuração no Sults
     if (prazoHoras !== null && prazoHoras > 0 && prazoHoras < 24)
-      corrigido = true;
-    if (!d.concluido && !d.resolvido && !d.assunto.includes("Impressora"))
-      corrigido = true;
-    if (!d.prazo) corrigido = true;
-    if (!d.concluido && d.resolvido && d.prazo && d.resolvido <= d.prazo)
-      corrigido = true;
-    d.noPrazoCor = corrigido
-      ? true
-      : d.concluido && d.prazo
-        ? d.concluido <= d.prazo
-        : false;
+      motivo = "Prazo irreal (<24h)";
+    // G2: Sem prazo cadastrado — campo obrigatório não preenchido
+    else if (!d.prazo) motivo = "Sem prazo cadastrado";
+    // G3: Resolvido dentro do prazo mas ainda não concluído — esquecimento de encerramento
+    else if (!d.concluido && d.resolvido && d.prazo && d.resolvido <= d.prazo)
+      motivo = "Resolvido no prazo, aguardando conclusão";
+
+    // G4: Chamado em aberto sem resolução — pode estar em andamento legitimamente
+    // NÃO aplicamos correção aqui — esses puxam o SLA para baixo corretamente
+    // exceto se confirmado manualmente como erro
+
+    d.noPrazoCor = motivo ? true : d.noPrazoBruto;
+    d.motivoCorrecao = motivo;
   });
 
-  const volBase = mesesNum.map(
-    (m) =>
-      filtrado.filter(
-        (d) =>
-          d.aberto.getFullYear() === anoBase && d.aberto.getMonth() + 1 === m,
-      ).length,
-  );
-  const volComp = mesesNum.map(
-    (m) =>
-      filtrado.filter(
-        (d) =>
-          d.aberto.getFullYear() === anoComp && d.aberto.getMonth() + 1 === m,
-      ).length,
-  );
-  const slaMes = (ano, mes) => {
-    const s = filtrado.filter(
+  // ETAPA 4: Calcular métricas — MESMA base para todos os componentes
+  const porAnoMes = (ano, mes) =>
+    filtrado.filter(
       (d) => d.aberto.getFullYear() === ano && d.aberto.getMonth() + 1 === mes,
     );
+
+  const slaMes = (ano, mes, campo) => {
+    const s = porAnoMes(ano, mes);
     return s.length
-      ? +((s.filter((d) => d.noPrazoCor).length / s.length) * 100).toFixed(1)
-      : 0;
-  };
-  const satMes = (ano, mes) => {
-    const s = filtrado.filter(
-      (d) =>
-        d.aberto.getFullYear() === ano &&
-        d.aberto.getMonth() + 1 === mes &&
-        d.satisfacao,
-    );
-    return s.length
-      ? +(s.reduce((a, b) => a + b.satisfacao, 0) / s.length).toFixed(2)
-      : 0;
+      ? +((s.filter((d) => d[campo]).length / s.length) * 100).toFixed(1)
+      : null;
   };
 
+  const satMes = (ano, mes) => {
+    const s = porAnoMes(ano, mes).filter((d) => d.satisfacao);
+    return s.length
+      ? +(s.reduce((a, b) => a + b.satisfacao, 0) / s.length).toFixed(2)
+      : null;
+  };
+
+  // CATEGORIAS — mesma base filtrado
   const catMap = {};
   filtrado.forEach((d) => {
-    const cat = d.assunto.split(">")[0].trim() || "Outros",
-      ano = d.aberto.getFullYear();
+    const cat = d.assunto.split(">")[0].trim() || "Outros";
+    const ano = d.aberto.getFullYear();
     if (!catMap[cat]) catMap[cat] = { vBase: 0, vComp: 0 };
     if (ano === anoBase) catMap[cat].vBase++;
     if (ano === anoComp) catMap[cat].vComp++;
@@ -317,10 +329,11 @@ function processarChamados(chamados) {
     .sort((a, b) => b.v2025 - a.v2025)
     .slice(0, 8);
 
+  // ASSUNTOS — mesma base filtrado
   const assMap = {};
   filtrado.forEach((d) => {
-    const ass = d.assunto.replace(">", "›").trim() || "Outros",
-      ano = d.aberto.getFullYear();
+    const ass = d.assunto.replace(">", "›").trim() || "Outros";
+    const ano = d.aberto.getFullYear();
     if (!assMap[ass]) assMap[ass] = { v2025: 0, v2026: 0 };
     if (ano === anoBase) assMap[ass].v2025++;
     if (ano === anoComp) assMap[ass].v2026++;
@@ -335,6 +348,7 @@ function processarChamados(chamados) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
+  // RESPONSÁVEIS — mesma base filtrado, usa SLA corrigido
   const respMap = {};
   filtrado.forEach((d) => {
     const nome = d.responsavel || "Sem responsável";
@@ -355,6 +369,7 @@ function processarChamados(chamados) {
     .filter((r) => r.total >= 3)
     .sort((a, b) => b.total - a.total);
 
+  // KPIs GLOBAIS — mesma base filtrado
   const totalBase = filtrado.filter(
     (d) => d.aberto.getFullYear() === anoBase,
   ).length;
@@ -366,6 +381,10 @@ function processarChamados(chamados) {
     (filtrado.filter((d) => d.noPrazoCor).length / filtrado.length) *
     100
   ).toFixed(1);
+  const slaBruto = +(
+    (filtrado.filter((d) => d.noPrazoBruto).length / filtrado.length) *
+    100
+  ).toFixed(1);
   const tempos = filtrado
     .filter((d) => d.concluido && d.aberto)
     .map((d) => (d.concluido - d.aberto) / 3600000)
@@ -374,11 +393,40 @@ function processarChamados(chamados) {
     ? +tempos[Math.floor(tempos.length / 2)].toFixed(1)
     : 0;
 
+  // DIAGNÓSTICO — log no console para auditoria
+  const corrigidos = filtrado.filter((d) => d.motivoCorrecao);
+  console.group(`📊 Diagnóstico SLA — ${anoBase} vs ${anoComp}`);
+  console.log(`Total recebido da API: ${chamados.length}`);
+  console.log(
+    `Após filtro de período: ${filtrado.length} (${totalBase} em ${anoBase}, ${totalComp} em ${anoComp})`,
+  );
+  console.log(
+    `Sem data de abertura (descartados): ${chamados.length - filtrado.length}`,
+  );
+  console.log(
+    `─── SLA BRUTO: ${slaBruto}% (${filtrado.filter((d) => d.noPrazoBruto).length} de ${filtrado.length})`,
+  );
+  console.log(`    Fórmula: concluído E concluído <= prazo`);
+  console.log(
+    `─── SLA CORRIGIDO: ${slaGlobal}% (${filtrado.filter((d) => d.noPrazoCor).length} de ${filtrado.length})`,
+  );
+  console.log(`    Correções aplicadas: ${corrigidos.length} chamados`);
+  const motivos = {};
+  corrigidos.forEach((d) => {
+    motivos[d.motivoCorrecao] = (motivos[d.motivoCorrecao] || 0) + 1;
+  });
+  Object.entries(motivos).forEach(([m, n]) =>
+    console.log(`    - ${m}: ${n} chamados`),
+  );
+  console.groupEnd();
+
   return {
-    volume2025: volBase,
-    volume2026: volComp,
-    sla2025: mesesNum.map((m) => slaMes(anoBase, m)),
-    sla2026: mesesNum.map((m) => slaMes(anoComp, m)),
+    volume2025: mesesNum.map((m) => porAnoMes(anoBase, m).length),
+    volume2026: mesesNum.map((m) => porAnoMes(anoComp, m).length),
+    sla2025: mesesNum.map((m) => slaMes(anoBase, m, "noPrazoCor")),
+    sla2026: mesesNum.map((m) => slaMes(anoComp, m, "noPrazoCor")),
+    slaBruto2025: mesesNum.map((m) => slaMes(anoBase, m, "noPrazoBruto")),
+    slaBruto2026: mesesNum.map((m) => slaMes(anoComp, m, "noPrazoBruto")),
     sat2025: mesesNum.map((m) => satMes(anoBase, m)),
     sat2026: mesesNum.map((m) => satMes(anoComp, m)),
     categorias: catArr.map((c) => c.nome),
@@ -392,6 +440,7 @@ function processarChamados(chamados) {
     total2025: totalBase,
     total2026: totalComp,
     slaGlobal,
+    slaBruto,
     tempoMediano,
     anoBase,
     anoComp,
@@ -583,30 +632,66 @@ function initCharts(d) {
       },
     },
   });
+  // Substituir null por undefined para o Chart.js não interpolar
+  const slaBase = (d.sla2025 || []).map((v) => v ?? undefined);
+  const slaComp = (d.sla2026 || []).map((v) => v ?? undefined);
+  const slaBBase = (d.slaBruto2025 || []).map((v) => v ?? undefined);
+  const slaBComp = (d.slaBruto2026 || []).map((v) => v ?? undefined);
+
   charts.sla = new Chart(document.getElementById("chartSLA"), {
     type: "line",
     data: {
       labels: meses,
       datasets: [
         {
-          label: `SLA ${anoBase}`,
-          data: d.sla2025,
+          label: `SLA ${anoBase} corrigido`,
+          data: slaBase,
           borderColor: "#7eaadf",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
           pointBackgroundColor: "#7eaadf",
+          spanGaps: false,
         },
         {
-          label: `SLA ${anoComp}`,
-          data: d.sla2026,
+          label: `SLA ${anoComp} corrigido`,
+          data: slaComp,
           borderColor: "#52b899",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
           pointBackgroundColor: "#52b899",
+          spanGaps: false,
+        },
+        {
+          label: `SLA ${anoBase} bruto`,
+          data: slaBBase,
+          borderColor: "#7eaadf",
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          tension: 0.2,
+          pointRadius: 3,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#7eaadf",
+          pointBorderWidth: 2,
+          spanGaps: false,
+        },
+        {
+          label: `SLA ${anoComp} bruto`,
+          data: slaBComp,
+          borderColor: "#52b899",
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          tension: 0.2,
+          pointRadius: 3,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#52b899",
+          pointBorderWidth: 2,
+          spanGaps: false,
         },
         {
           label: "Meta 90%",
@@ -621,15 +706,30 @@ function initCharts(d) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 20, bottom: 10 } },
-      plugins: { legend: { position: "top" } },
+      layout: { padding: { top: 28, bottom: 10 } },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: { boxWidth: 14, font: { size: 10 }, padding: 10 },
+        },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const v = ctx.parsed.y;
+              return v !== null && v !== undefined
+                ? ` ${ctx.dataset.label}: ${v.toFixed(1)}%`
+                : ` ${ctx.dataset.label}: sem dados`;
+            },
+          },
+        },
+      },
       scales: {
         x: { grid: { display: false } },
         y: {
           grid: { color: grid },
-          min: 60,
+          min: 0,
           max: 105,
-          ticks: { callback: (v) => v + "%" },
+          ticks: { callback: (v) => v + "%", stepSize: 10 },
         },
       },
     },
@@ -638,31 +738,42 @@ function initCharts(d) {
         id: "slaAnnotation",
         afterDatasetsDraw(chart) {
           const { ctx } = chart;
-          [0, 1].forEach((di) => {
-            const ds = chart.data.datasets[di],
-              meta = chart.getDatasetMeta(di);
+          // Anotar todas as 4 linhas com seus valores
+          [0, 1, 2, 3].forEach((di) => {
+            const ds = chart.data.datasets[di];
+            const meta = chart.getDatasetMeta(di);
             if (meta.hidden) return;
-            const vals = ds.data,
-              minV = Math.min(...vals);
+            const isBruto = di >= 2;
+
             meta.data.forEach((point, i) => {
-              const v = vals[i],
-                isMin = v === minV,
-                label = v.toFixed(1) + "%",
-                above = !isMin,
-                yPos = above ? point.y - 20 : point.y + 20;
+              const v = ds.data[i];
+              if (v === null || v === undefined) return;
+              const label = v.toFixed(1) + "%";
+
+              // Bruto fica abaixo do ponto, corrigido fica acima
+              const above = !isBruto;
+              const yPos = above ? point.y - 16 : point.y + 16;
+
               ctx.save();
-              const tw = ctx.measureText(label).width + 10,
-                th = 14;
-              ctx.fillStyle = isMin
-                ? "rgba(192,57,43,0.10)"
-                : di === 0
-                  ? "rgba(126,170,223,0.12)"
-                  : "rgba(82,184,153,0.12)";
+              const tw = ctx.measureText(label).width + 10;
+              const th = 13;
+
+              // Fundo da pill
+              if (isBruto) {
+                ctx.fillStyle =
+                  di === 2 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
+              } else {
+                ctx.fillStyle =
+                  di === 0 ? "rgba(126,170,223,0.12)" : "rgba(82,184,153,0.12)";
+              }
               ctx.beginPath();
-              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
+              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 3);
               ctx.fill();
-              ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-              ctx.fillStyle = isMin ? "#c0392b" : ds.borderColor;
+
+              // Texto
+              ctx.font = `${isBruto ? "500" : "bold"} 9px "Aptos Narrow", sans-serif`;
+              ctx.fillStyle = ds.borderColor;
+              ctx.globalAlpha = isBruto ? 0.75 : 1;
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
               ctx.fillText(label, point.x, yPos);
@@ -848,6 +959,16 @@ function atualizarKPIs(d) {
     `${d.avaliados || 344} de ${d.totalFiltro || 515} avaliados (${d.totalFiltro ? ((d.avaliados / d.totalFiltro) * 100).toFixed(1) : 66.8}%)`;
   document.querySelector(".kpi-value-sla").textContent =
     (d.slaGlobal || 93.0).toFixed(1) + "%";
+  const brutoEl = document.getElementById("kpiSlaBruto");
+  if (brutoEl && d.slaBruto !== undefined) {
+    brutoEl.textContent = `SLA bruto: ${d.slaBruto.toFixed(1)}%`;
+    brutoEl.style.color =
+      d.slaBruto >= 90
+        ? "var(--accent4)"
+        : d.slaBruto >= 60
+          ? "var(--accent5)"
+          : "var(--accent3)";
+  }
   document.querySelector(".kpi-card.green:last-child .kpi-value").textContent =
     (d.tempoMediano || 40.5) + "h";
   document.getElementById("filterBadge").textContent =
