@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chamados — TI | Comparativo Jan-Mai (2025 x 2026)</title>
+    <title>Chamados — TI | Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=500;600;700&family=Source+Sans+3:wght=300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -17,22 +17,97 @@
       <header>
         <div class="header-left">
           <h1>Dashboard de Chamados — TI</h1>
-          <p class="subtitle">
-            Análise Comparativa de Desempenho · Janeiro a Maio (2025 vs 2026)
+          <p class="subtitle" id="subtitlePeriodo">
+            Análise Comparativa de Desempenho
           </p>
         </div>
         <div class="header-right">
           <span class="badge">Fonte: Sults</span>
           <span class="badge active" id="filterBadge"
-            >Filtro Amostral: 1.979 Chamados</span
+            >Filtro Amostral: Depto TI</span
           >
         </div>
       </header>
 
-      <!-- BARRA DE IMPORTAÇÃO -->
+      <!-- SELETOR DE PERÍODO -->
+      <div class="periodo-bar">
+        <span class="periodo-label">Período de análise</span>
+        <div class="periodo-campos">
+          <div class="periodo-grupo">
+            <label class="periodo-field-label">Ano base</label>
+            <select id="anoBase" class="periodo-select">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+          <div class="periodo-grupo">
+            <label class="periodo-field-label">Mês início</label>
+            <select id="mesInicio" class="periodo-select">
+              <option value="1" selected>Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5">Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div class="periodo-grupo">
+            <label class="periodo-field-label">Mês fim</label>
+            <select id="mesFim" class="periodo-select">
+              <option value="1">Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5" selected>Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div class="periodo-vs-wrap">
+            <span class="periodo-vs-text">vs ano anterior</span>
+            <span id="periodoResumo" class="periodo-resumo"
+              >Jan–Mai 2026 vs 2025</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- BARRA DE AÇÕES -->
       <div class="import-bar">
         <div class="import-left">
-          <button id="btnImportar" class="import-btn">
+          <button id="btnBuscarSults" class="import-btn sults-btn">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="margin-right: 6px; vertical-align: -2px"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path
+                d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
+              />
+            </svg>
+            Buscar dados do Sults
+          </button>
+          <span class="import-divider">ou</span>
+          <button id="btnImportar" class="import-btn secondary-btn">
             <svg
               width="14"
               height="14"
@@ -46,7 +121,7 @@
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            Importar Planilha Sults (.xlsx)
+            Importar Planilha (.xlsx)
           </button>
           <input
             type="file"
@@ -54,20 +129,68 @@
             accept=".xlsx,.xls"
             style="display: none"
           />
+          <span class="import-divider">·</span>
+          <button id="btnPendentes" class="import-btn pendentes-btn">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="margin-right: 6px; vertical-align: -2px"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Chamados Pendentes
+          </button>
           <span id="nomeArquivo" class="import-filename"
-            >Nenhum arquivo — exibindo dados padrão</span
+            >Exibindo dados padrão</span
           >
         </div>
         <span id="statusImport" class="import-status"></span>
       </div>
 
+      <!-- PAINEL DE CHAMADOS PENDENTES -->
+      <div id="painelPendentes" class="painel-pendentes" style="display: none">
+        <div class="painel-header">
+          <div class="painel-header-left">
+            <div>
+              <h3 class="painel-title">Chamados Pendentes de Conclusão</h3>
+              <p class="painel-sub">
+                Chamados resolvidos no Sults aguardando encerramento formal
+              </p>
+            </div>
+          </div>
+          <div class="painel-header-right">
+            <span id="statusPendentes" class="painel-status"></span>
+            <button id="btnFecharPainel" class="painel-fechar">✕ Fechar</button>
+          </div>
+        </div>
+        <div class="painel-body">
+          <table class="painel-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Assunto</th>
+                <th>Responsável</th>
+                <th>Resolvido em</th>
+                <th>Status SLA</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody id="pendentesBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- KPIs -->
       <div class="kpi-grid">
         <div class="kpi-card blue">
-          <div class="kpi-label">Volume Total (Jan-Mai)</div>
-          <div class="kpi-value">1.979</div>
-          <div class="kpi-sub">
-            <strong>1.031</strong> em 2025 · <strong>948</strong> em 2026
-          </div>
+          <div class="kpi-label">Volume Total do Período</div>
+          <div class="kpi-value">—</div>
+          <div class="kpi-sub" id="kpiVolumeSub">Aguardando dados</div>
         </div>
         <div class="kpi-card blue2">
           <div class="kpi-label">Satisfação Média</div>
@@ -86,6 +209,7 @@
         </div>
       </div>
 
+      <!-- ANÁLISE DINÂMICA -->
       <div class="chart-card full" style="margin-bottom: 24px; padding: 24px">
         <h3
           style="
@@ -116,18 +240,15 @@
         </div>
       </div>
 
-      <div
-        class="charts-grid"
-        style="grid-template-columns: 1fr"
-        id="sectionEvo"
-      >
+      <!-- VOLUME -->
+      <div class="charts-grid" style="grid-template-columns: 1fr">
         <div class="chart-card full" style="padding: 0; overflow: hidden">
           <div style="display: flex; gap: 0">
             <div style="flex: 1; padding: 24px 26px">
-              <h3>Volume de Chamados por Mês</h3>
+              <h3 id="titleVolume">Volume de Chamados por Mês</h3>
               <div class="chart-divider"></div>
-              <p class="chart-sub">
-                Comparativo direto sazonal (Janeiro a Maio)
+              <p class="chart-sub" id="subVolume">
+                Comparativo sazonal do período
               </p>
               <div class="chart-wrap" style="height: 320px">
                 <canvas id="chartEvolucao"></canvas>
@@ -175,19 +296,20 @@
         </div>
       </div>
 
+      <!-- CATEGORIAS + SLA -->
       <div class="charts-grid">
         <div class="chart-card">
-          <h3>Categorias: 2025 vs 2026</h3>
+          <h3 id="titleCategorias">Categorias do Período</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">
-            Comparativo de volumetria das principais frentes · ordenado por 2026
+          <p class="chart-sub" id="subCategorias">
+            Comparativo de volumetria das principais frentes
           </p>
           <div class="chart-wrap" style="height: 320px">
             <canvas id="chartCategoria"></canvas>
           </div>
         </div>
         <div class="chart-card">
-          <h3>SLA por Mês: 2025 vs 2026</h3>
+          <h3 id="titleSLA">SLA por Mês</h3>
           <div class="chart-divider"></div>
           <p class="chart-sub">
             % de cumprimento de prazo comparado com a Meta (90%)
@@ -198,15 +320,16 @@
         </div>
       </div>
 
+      <!-- SATISFAÇÃO -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr; margin-top: 0"
       >
         <div class="chart-card full">
-          <h3>Evolução da Satisfação Média</h3>
+          <h3 id="titleSat">Evolução da Satisfação Média</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">
-            Comparativo das notas fiscais/atendimento entre os períodos
+          <p class="chart-sub" id="subSat">
+            Comparativo das notas de atendimento entre os períodos
           </p>
           <div class="chart-wrap" style="height: 260px">
             <canvas id="chartSat"></canvas>
@@ -214,15 +337,16 @@
         </div>
       </div>
 
+      <!-- PERFORMANCE -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr; margin-top: 0"
       >
         <div class="chart-card full">
-          <h3>Performance da Equipe de TI (Consolidado Jan-Mai)</h3>
+          <h3 id="titlePerf">Performance da Equipe de TI</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">
-            Métricas agregadas dos atendimentos nos períodos selecionados
+          <p class="chart-sub" id="subPerf">
+            Métricas agregadas dos atendimentos no período selecionado
           </p>
           <table class="resp-table">
             <thead>
@@ -240,14 +364,15 @@
         </div>
       </div>
 
+      <!-- ASSUNTOS -->
       <div
         class="charts-grid"
         style="grid-template-columns: 1fr; margin-top: 0"
       >
         <div class="chart-card full">
-          <h3>Top 10 Assuntos Mais Recorrentes: 2025 vs 2026</h3>
+          <h3 id="titleAssuntos">Top 10 Assuntos Mais Recorrentes</h3>
           <div class="chart-divider"></div>
-          <p class="chart-sub">
+          <p class="chart-sub" id="subAssuntos">
             Ordenado por volume total · valores no topo de cada barra
           </p>
           <div class="chart-wrap xtra" style="min-height: 380px">
@@ -261,10 +386,7 @@
           >Fonte dos dados estruturados:
           <strong>Sults Corporativo</strong></span
         >
-        <span
-          >Escopo analítico:
-          <strong>Janeiro a Maio (2025 vs 2026)</strong></span
-        >
+        <span>Escopo analítico: <strong id="footerPeriodo">—</strong></span>
       </footer>
     </div>
     <script src="script.js"></script>
