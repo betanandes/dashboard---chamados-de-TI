@@ -65,6 +65,11 @@ function atualizarResumo() {
   set("titleSLA", `SLA por Mês: ${anoBase} vs ${anoComp}`);
   set("titleSat", `Satisfação Média · ${texto}`);
   set("subSat", `Notas de atendimento · ${periodo} (${anoBase} vs ${anoComp})`);
+  set("titleTempo", `Tempo Mediano de Resolução por Mês · ${texto}`);
+  set(
+    "subTempo",
+    `Mediana de horas entre abertura e conclusão/resolução · ${periodo}`,
+  );
   set("titlePerf", `Performance da Equipe · ${periodo} ${anoBase}`);
   set("subPerf", `Métricas agregadas — ${texto}`);
   set("titleAssuntos", `Top 10 Assuntos: ${anoBase} vs ${anoComp}`);
@@ -85,6 +90,8 @@ const dadosPadrao = {
   sla2026: [39.7, 53.0, 44.2, 39.1, 55.2, 48.5],
   sat2025: [4.89, 4.8, 4.91, 4.89, 4.91, 4.93],
   sat2026: [null, null, null, null, null, null],
+  tempoMediano2025: [46.1, 72.6, 84.1, 52.8, 48.1, 22.5],
+  tempoMediano2026: [52.5, 21.8, 45.1, 45.3, 23.4, 27.0],
   categorias: [
     "SAP",
     "E-mail",
@@ -131,7 +138,7 @@ const dadosPadrao = {
   avaliados: 820,
   totalFiltro: 2398,
   slaGlobal: 55.5,
-  tempoMediano: 40.5,
+  tempoMediano: 39.7,
   total2025: 1218,
   total2026: 1180,
   anoBase: 2026,
@@ -341,6 +348,20 @@ function processarChamados(chamados) {
       : null;
   };
 
+  const medianaArr = (arr) => {
+    if (!arr.length) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    const meio = Math.floor(s.length / 2);
+    return s.length % 2 !== 0 ? s[meio] : (s[meio - 1] + s[meio]) / 2;
+  };
+  const tempoMedianoMes = (ano, mes) => {
+    const s = porAnoMes(ano, mes)
+      .filter((d) => d.dataEfetiva && d.aberto)
+      .map((d) => (d.dataEfetiva - d.aberto) / 3600000);
+    const m = medianaArr(s);
+    return m !== null ? +m.toFixed(1) : null;
+  };
+
   const catMap = {};
   filtrado.forEach((d) => {
     const cat = d.assunto.split(">")[0].trim() || "Outros",
@@ -409,13 +430,14 @@ function processarChamados(chamados) {
     (filtrado.filter((d) => d.noPrazoCor).length / filtrado.length) *
     100
   ).toFixed(1);
+  // Tempo Mediano de Resolução — usa dataEfetiva (concluido ?? resolvido)
+  // para manter a mesma população de chamados usada no cálculo de SLA.
+  // Mediana calculada corretamente: média dos dois valores centrais
+  // quando a quantidade de chamados é par (não apenas um deles).
   const tempos = filtrado
-    .filter((d) => d.concluido && d.aberto)
-    .map((d) => (d.concluido - d.aberto) / 3600000)
-    .sort((a, b) => a - b);
-  const tempoMediano = tempos.length
-    ? +tempos[Math.floor(tempos.length / 2)].toFixed(1)
-    : 0;
+    .filter((d) => d.dataEfetiva && d.aberto)
+    .map((d) => (d.dataEfetiva - d.aberto) / 3600000);
+  const tempoMediano = +(medianaArr(tempos) || 0).toFixed(1);
 
   const comSolucao = filtrado.filter((d) => d.dataEfetiva);
   const emAberto = filtrado.filter((d) => !d.dataEfetiva);
@@ -450,6 +472,8 @@ function processarChamados(chamados) {
     sla2026: mesesNum.map((m) => slaMes(anoComp, m, "noPrazoCor")),
     sat2025: mesesNum.map((m) => satMes(anoBase, m)),
     sat2026: mesesNum.map((m) => satMes(anoComp, m)),
+    tempoMediano2025: mesesNum.map((m) => tempoMedianoMes(anoBase, m)),
+    tempoMediano2026: mesesNum.map((m) => tempoMedianoMes(anoComp, m)),
     categorias: catArr.map((c) => c.nome),
     cat2025: catArr.map((c) => c.v2025),
     cat2026: catArr.map((c) => c.v2026),
@@ -854,6 +878,102 @@ function initCharts(d) {
             if (meta1 && !meta1.hidden)
               draw(meta1.data[i], v1, ds1.borderColor, v1 > v0);
           }
+        },
+      },
+    ],
+  });
+
+  const tempoBase = (d.tempoMediano2025 || []).map((v) => v ?? undefined);
+  const tempoComp = (d.tempoMediano2026 || []).map((v) => v ?? undefined);
+
+  charts.tempo = new Chart(document.getElementById("chartTempo"), {
+    type: "line",
+    data: {
+      labels: meses,
+      datasets: [
+        {
+          label: `Tempo ${anoBase}`,
+          data: tempoBase,
+          borderColor: "#7eaadf",
+          backgroundColor: "transparent",
+          borderWidth: 2.5,
+          tension: 0.2,
+          pointRadius: 4,
+          pointBackgroundColor: "#7eaadf",
+          spanGaps: false,
+        },
+        {
+          label: `Tempo ${anoComp}`,
+          data: tempoComp,
+          borderColor: "#52b899",
+          backgroundColor: "transparent",
+          borderWidth: 2.5,
+          tension: 0.2,
+          pointRadius: 4,
+          pointBackgroundColor: "#52b899",
+          spanGaps: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 28, bottom: 10 } },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: { boxWidth: 14, font: { size: 11 }, padding: 12 },
+        },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const v = ctx.parsed.y;
+              return v != null
+                ? ` ${ctx.dataset.label}: ${v.toFixed(1)}h`
+                : ` sem dados`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          grid: { color: grid },
+          beginAtZero: true,
+          ticks: { callback: (v) => v + "h" },
+        },
+      },
+    },
+    plugins: [
+      {
+        id: "tempoAnnotation",
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          [0, 1].forEach((di) => {
+            const ds = chart.data.datasets[di],
+              meta = chart.getDatasetMeta(di);
+            if (meta.hidden) return;
+            meta.data.forEach((point, i) => {
+              const v = ds.data[i];
+              if (v == null || v === undefined) return;
+              const label = v.toFixed(1) + "h",
+                yPos = point.y - 18;
+              ctx.save();
+              const tw = ctx.measureText(label).width + 10,
+                th = 14;
+              ctx.fillStyle =
+                di === 0 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
+              ctx.beginPath();
+              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
+              ctx.fill();
+              ctx.font = 'bold 10px "Aptos Narrow",sans-serif';
+              ctx.fillStyle = ds.borderColor;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(label, point.x, yPos);
+              ctx.restore();
+            });
+          });
         },
       },
     ],
