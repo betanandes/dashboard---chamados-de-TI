@@ -1,9 +1,4 @@
 // ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────
-const SULTS_TOKEN = "O2Zhc3Rkcnl3YWxsOzE3NzQ4OTI1MTQwOTk=";
-const SULTS_API = "https://api.sults.com.br/api/v1/chamado/ticket";
-const DEPTO_TI = 9;
-const USUARIO_ID = 1617;
-
 // ⚠️ Link CSV publicado do Google Sheets
 const GOOGLE_SHEETS_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTzs4z4cP6FIKJYr9qGOnA_mcl8giq7MTx6Q9lqqAOrpgT62qwrWvX9Q1o5XvMZeqeXDQzJC5GaLGDM/pub?output=csv";
@@ -209,11 +204,6 @@ const parseDate = (v) => {
   return null;
 };
 
-const headers = {
-  Authorization: SULTS_TOKEN,
-  "Content-Type": "application/json;charset=UTF-8",
-};
-
 // ── BUSCA PLANILHA DO GOOGLE SHEETS (CSV) ─────────────────────────────────
 async function buscarPlanilhaGoogleSheets() {
   if (!GOOGLE_SHEETS_URL)
@@ -229,87 +219,6 @@ async function buscarPlanilhaGoogleSheets() {
     raw: false,
   });
   return processarPlanilha(workbook);
-}
-
-// ── BUSCA API SULTS (com concorrência controlada) ─────────────────────────
-async function buscarTodosChamados(onProgresso) {
-  const { anoComp, mesInicio, mesFim, anoBase } = getPeriodo();
-  const abertoStart = `${anoComp}-${String(mesInicio).padStart(2, "0")}-01T00:00:00Z`;
-  const abertoEnd = `${anoBase}-${String(mesFim).padStart(2, "0")}-${new Date(anoBase, mesFim, 0).getDate()}T23:59:59Z`;
-  const baseUrl = `${SULTS_API}?limit=100&departamento=${DEPTO_TI}&abertoStart=${abertoStart}&abertoEnd=${abertoEnd}`;
-
-  const fetchPagina = async (p, tentativas = 3) => {
-    for (let i = 0; i < tentativas; i++) {
-      try {
-        const res = await fetch(`${baseUrl}&start=${p}`, {
-          method: "GET",
-          headers,
-        });
-        if (!res.ok) throw new Error(`Erro ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        if (i === tentativas - 1) throw err;
-        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
-      }
-    }
-  };
-
-  const primeiraJson = await fetchPagina(0);
-  const totalPaginas = primeiraJson.totalPage || 1;
-  const todos = [...(primeiraJson.data || [])];
-  if (onProgresso) onProgresso(1, totalPaginas, todos.length);
-
-  if (totalPaginas > 1) {
-    const CONCORRENCIA = 3;
-    let proxima = 1;
-    const trabalhador = async () => {
-      while (proxima < totalPaginas) {
-        const p = proxima++;
-        const json = await fetchPagina(p);
-        todos.push(...(json.data || []));
-        if (onProgresso)
-          onProgresso(todos.length, totalPaginas * 100, todos.length);
-        await new Promise((r) => setTimeout(r, 80));
-      }
-    };
-    const workers = Array.from(
-      { length: Math.min(CONCORRENCIA, totalPaginas - 1) },
-      trabalhador,
-    );
-    await Promise.all(workers);
-  }
-  if (onProgresso) onProgresso(totalPaginas, totalPaginas, todos.length);
-  return todos;
-}
-
-async function buscarChamadosPendentes() {
-  const res = await fetch(
-    `${SULTS_API}?start=0&limit=100&departamento=${DEPTO_TI}&situacao=3`,
-    { method: "GET", headers },
-  );
-  if (!res.ok) throw new Error(`Erro ${res.status}`);
-  const json = await res.json();
-  return json.data || [];
-}
-
-async function concluirChamado(chamadoId) {
-  const res = await fetch(`${SULTS_API}/${chamadoId}/action/conclude`, {
-    method: "PUT",
-    headers: {
-      Authorization: SULTS_TOKEN,
-      "Content-Type": "application/json;charset=UTF-8",
-    },
-    body: JSON.stringify({ pessoaId: USUARIO_ID }),
-  });
-  if (!res.ok) {
-    let msg = `Erro ${res.status}`;
-    try {
-      const j = await res.json();
-      msg += `: ${j.error || j.message || JSON.stringify(j)}`;
-    } catch {}
-    throw new Error(msg);
-  }
-  return true;
 }
 
 // ── PROCESSAMENTO DOS CHAMADOS ─────────────────────────────────────────────
@@ -631,9 +540,9 @@ function processarPlanilha(workbook) {
 
 // ── GRÁFICOS ───────────────────────────────────────────────────────────────
 let charts = {};
-Chart.defaults.color = "#8a99ad";
-Chart.defaults.font.family = "'Source Sans 3', sans-serif";
-const grid = "rgba(255,255,255,0.05)";
+Chart.defaults.color = "#8a8a92";
+Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+const grid = "rgba(24,24,27,0.06)";
 
 const smartDatalabelPlugin = {
   id: "smartDatalabel",
@@ -647,8 +556,8 @@ const smartDatalabelPlugin = {
         const v = ds.data[i];
         if (v === 0 || v == null) return;
         ctx.save();
-        ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-        ctx.fillStyle = "#1e293b";
+        ctx.font = "bold 10px Inter, system-ui, sans-serif";
+        ctx.fillStyle = "#18181b";
         if (isH) {
           ctx.textAlign = "left";
           ctx.textBaseline = "middle";
@@ -680,13 +589,13 @@ function initCharts(d) {
         {
           label: `Ano ${anoBase}`,
           data: d.volume2025,
-          backgroundColor: "rgba(93,142,199,0.8)",
+          backgroundColor: "rgba(192,39,45,0.85)",
           borderRadius: 3,
         },
         {
           label: `Ano ${anoComp}`,
           data: d.volume2026,
-          backgroundColor: "rgba(46,78,140,0.95)",
+          backgroundColor: "rgba(82,82,91,0.85)",
           borderRadius: 3,
         },
       ],
@@ -718,13 +627,13 @@ function initCharts(d) {
         {
           label: `${anoBase}`,
           data: cs.map((c) => c.v25),
-          backgroundColor: "#4a7fc1",
+          backgroundColor: "#c0272d",
           borderRadius: 2,
         },
         {
           label: `${anoComp}`,
           data: cs.map((c) => c.v26),
-          backgroundColor: "#2e4e8c",
+          backgroundColor: "#3f3f46",
           borderRadius: 2,
         },
       ],
@@ -758,29 +667,29 @@ function initCharts(d) {
         {
           label: `SLA ${anoBase}`,
           data: slaBase,
-          borderColor: "#7eaadf",
+          borderColor: "#c0272d",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
-          pointBackgroundColor: "#7eaadf",
+          pointBackgroundColor: "#c0272d",
           spanGaps: false,
         },
         {
           label: `SLA ${anoComp}`,
           data: slaComp,
-          borderColor: "#52b899",
+          borderColor: "#52525b",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
-          pointBackgroundColor: "#52b899",
+          pointBackgroundColor: "#52525b",
           spanGaps: false,
         },
         {
           label: "Meta 90%",
           data: Array(meses.length).fill(90),
-          borderColor: "#f0c040",
+          borderColor: "#b07d2a",
           backgroundColor: "transparent",
           borderWidth: 2,
           pointRadius: 0,
@@ -835,11 +744,11 @@ function initCharts(d) {
               const tw = ctx.measureText(label).width + 10,
                 th = 14;
               ctx.fillStyle =
-                di === 0 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
+                di === 0 ? "rgba(192,39,45,0.12)" : "rgba(82,82,91,0.12)";
               ctx.beginPath();
               ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
               ctx.fill();
-              ctx.font = 'bold 10px "Aptos Narrow",sans-serif';
+              ctx.font = "bold 10px Inter, system-ui, sans-serif";
               ctx.fillStyle = ds.borderColor;
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
@@ -860,7 +769,7 @@ function initCharts(d) {
         {
           label: `Nota ${anoBase}`,
           data: d.sat2025,
-          borderColor: "#d4a84b",
+          borderColor: "#c0272d",
           backgroundColor: "transparent",
           borderWidth: 2,
           tension: 0.2,
@@ -869,7 +778,7 @@ function initCharts(d) {
         {
           label: `Nota ${anoComp}`,
           data: d.sat2026,
-          borderColor: "#a0c4e8",
+          borderColor: "#a1a1aa",
           backgroundColor: "transparent",
           borderWidth: 2,
           tension: 0.2,
@@ -911,7 +820,7 @@ function initCharts(d) {
           const draw = (point, v, color, above) => {
             if (v == null) return;
             ctx.save();
-            ctx.font = 'bold 10px "Source Sans 3", sans-serif';
+            ctx.font = "bold 10px Inter, system-ui, sans-serif";
             ctx.textAlign = "center";
             ctx.textBaseline = above ? "bottom" : "top";
             ctx.fillStyle = color;
@@ -946,23 +855,23 @@ function initCharts(d) {
         {
           label: `Tempo ${anoBase}`,
           data: tempoBase,
-          borderColor: "#7eaadf",
+          borderColor: "#c0272d",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
-          pointBackgroundColor: "#7eaadf",
+          pointBackgroundColor: "#c0272d",
           spanGaps: false,
         },
         {
           label: `Tempo ${anoComp}`,
           data: tempoComp,
-          borderColor: "#52b899",
+          borderColor: "#52525b",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
-          pointBackgroundColor: "#52b899",
+          pointBackgroundColor: "#52525b",
           spanGaps: false,
         },
       ],
@@ -1014,11 +923,11 @@ function initCharts(d) {
               const tw = ctx.measureText(label).width + 10,
                 th = 14;
               ctx.fillStyle =
-                di === 0 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
+                di === 0 ? "rgba(192,39,45,0.12)" : "rgba(82,82,91,0.12)";
               ctx.beginPath();
               ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
               ctx.fill();
-              ctx.font = 'bold 10px "Aptos Narrow",sans-serif';
+              ctx.font = "bold 10px Inter, system-ui, sans-serif";
               ctx.fillStyle = ds.borderColor;
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
@@ -1043,13 +952,13 @@ function initCharts(d) {
         {
           label: `Ano ${anoBase}`,
           data: at.map((a) => a.v2025),
-          backgroundColor: "rgba(74,127,193,0.75)",
+          backgroundColor: "rgba(192,39,45,0.8)",
           borderRadius: 3,
         },
         {
           label: `Ano ${anoComp}`,
           data: at.map((a) => a.v2026),
-          backgroundColor: "#2e4e8c",
+          backgroundColor: "#3f3f46",
           borderRadius: 3,
         },
       ],
@@ -1098,23 +1007,23 @@ function initCharts(d) {
           {
             label: `Ano ${anoBase}`,
             data: assTempoBase,
-            borderColor: "#7eaadf",
+            borderColor: "#c0272d",
             backgroundColor: "transparent",
             borderWidth: 2.5,
             tension: 0.2,
             pointRadius: 4,
-            pointBackgroundColor: "#7eaadf",
+            pointBackgroundColor: "#c0272d",
             spanGaps: false,
           },
           {
             label: `Ano ${anoComp}`,
             data: assTempoComp,
-            borderColor: "#52b899",
+            borderColor: "#52525b",
             backgroundColor: "transparent",
             borderWidth: 2.5,
             tension: 0.2,
             pointRadius: 4,
-            pointBackgroundColor: "#52b899",
+            pointBackgroundColor: "#52525b",
             spanGaps: false,
           },
         ],
@@ -1169,11 +1078,11 @@ function initCharts(d) {
                 const tw = ctx.measureText(label).width + 10,
                   th = 14;
                 ctx.fillStyle =
-                  di === 0 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
+                  di === 0 ? "rgba(192,39,45,0.12)" : "rgba(82,82,91,0.12)";
                 ctx.beginPath();
                 ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
                 ctx.fill();
-                ctx.font = 'bold 10px "Aptos Narrow",sans-serif';
+                ctx.font = "bold 10px Inter, system-ui, sans-serif";
                 ctx.fillStyle = ds.borderColor;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
@@ -1479,67 +1388,6 @@ function renderDashboard(d) {
   calcularInsights(d);
 }
 
-// ── PAINEL PENDENTES ──────────────────────────────────────────────────────
-async function abrirPainelPendentes() {
-  const painel = document.getElementById("painelPendentes"),
-    tbody = document.getElementById("pendentesBody"),
-    status = document.getElementById("statusPendentes");
-  painel.style.display = "block";
-  painel.scrollIntoView({ behavior: "smooth", block: "start" });
-  tbody.innerHTML = `<tr><td colspan="6" class="painel-loading">Buscando chamados resolvidos pendentes...</td></tr>`;
-  status.textContent = "";
-  try {
-    const chamados = await buscarChamadosPendentes();
-    if (!chamados.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="painel-empty">Nenhum chamado pendente de conclusão</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = "";
-    chamados.forEach((c, idx) => {
-      const resolvido = c.resolvido
-        ? new Date(c.resolvido).toLocaleDateString("pt-BR")
-        : "—";
-      const noPrazo =
-        c.resolvido &&
-        c.resolverEstipulado &&
-        new Date(c.resolvido) <= new Date(c.resolverEstipulado);
-      const rowCls = idx % 2 === 0 ? "painel-row" : "painel-row painel-row-alt";
-      tbody.insertAdjacentHTML(
-        "beforeend",
-        `<tr id="row-${c.id}" class="${rowCls}"><td class="painel-cell-id">#${c.id}</td><td class="painel-cell-assunto">${c.assunto?.nome || "—"}</td><td class="painel-cell-resp">${c.responsavel?.nome || "—"}</td><td class="painel-cell-data">${resolvido}</td><td><span class="painel-badge ${noPrazo ? "badge-prazo" : "badge-atraso"}">${noPrazo ? "✓ No prazo" : "⚠ Atrasado"}</span></td><td><button class="btn-concluir" onclick="concluirChamadoUI(${c.id})">✓ Concluir</button></td></tr>`,
-      );
-    });
-    status.textContent = `${chamados.length} pendentes`;
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="painel-loading" style="color:var(--accent3)">Erro: ${err.message}</td></tr>`;
-  }
-}
-
-window.concluirChamadoUI = async function (id) {
-  const btn = document.querySelector(`#row-${id} .btn-concluir`);
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Concluindo...";
-  }
-  try {
-    await concluirChamado(id);
-    const row = document.getElementById(`row-${id}`);
-    if (row) {
-      row.style.opacity = "0.4";
-      row.style.textDecoration = "line-through";
-      row.querySelector(".btn-concluir").textContent = "Concluído";
-    }
-    const s = document.getElementById("statusPendentes");
-    if (s) s.textContent = `Chamado #${id} concluído`;
-  } catch (err) {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "✓ Concluir";
-    }
-    alert(`Erro ao concluir #${id}: ${err.message}`);
-  }
-};
-
 // ── IMPORTAÇÃO EXCEL ──────────────────────────────────────────────────────
 function configurarImportacao() {
   const btn = document.getElementById("btnImportar"),
@@ -1608,43 +1456,7 @@ function configurarGoogleSheets() {
       status.style.color = "var(--accent3)";
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Atualizar da Planilha`;
-    }
-  });
-}
-
-// ── BUSCA SULTS ───────────────────────────────────────────────────────────
-function configurarBuscaSults() {
-  const btn = document.getElementById("btnBuscarSults"),
-    status = document.getElementById("statusImport"),
-    nome = document.getElementById("nomeArquivo");
-  btn.addEventListener("click", async () => {
-    btn.disabled = true;
-    btn.textContent = "⏳ Buscando...";
-    status.textContent = "Conectando ao Sults...";
-    status.style.color = "var(--muted)";
-    try {
-      const chamados = await buscarTodosChamados((c, t, q) => {
-        status.textContent = `⏳ Carregando — ${q} chamados...`;
-      });
-      const dados = processarChamados(chamados);
-      if (!dados) {
-        status.textContent = "❌ Nenhum chamado encontrado no período.";
-        status.style.color = "var(--accent3)";
-        return;
-      }
-      dadosAtivos = dados;
-      renderDashboard(dados);
-      const agora = new Date().toLocaleString("pt-BR");
-      status.textContent = `✅ ${dados.totalFiltro} chamados · Atualizado em ${agora}`;
-      status.style.color = "var(--accent4)";
-      nome.textContent = `API Sults · ${agora}`;
-    } catch (err) {
-      status.textContent = `❌ Erro: ${err.message}`;
-      status.style.color = "var(--accent3)";
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Buscar dados do Sults";
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Atualizar da Planilha`;
     }
   });
 }
@@ -1660,14 +1472,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (mesFimEl) mesFimEl.value = "6";
 
   configurarImportacao();
-  configurarBuscaSults();
   configurarGoogleSheets();
-  document
-    .getElementById("btnPendentes")
-    .addEventListener("click", abrirPainelPendentes);
-  document.getElementById("btnFecharPainel").addEventListener("click", () => {
-    document.getElementById("painelPendentes").style.display = "none";
-  });
 
   ["anoBase", "mesInicio", "mesFim"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", () => {
@@ -1675,7 +1480,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const status = document.getElementById("statusImport");
       if (dadosAtivos) {
         status.textContent =
-          "⚠️ Período alterado — clique em 'Atualizar do SharePoint' ou 'Buscar dados do Sults' para atualizar.";
+          "⚠️ Período alterado — clique em 'Atualizar da Planilha' para atualizar.";
         status.style.color = "var(--accent5)";
       }
     });
