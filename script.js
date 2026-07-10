@@ -77,6 +77,14 @@ function atualizarResumo() {
     "subAssuntos",
     `Top 10 assuntos · ${periodo} · não soma com o total do KPI`,
   );
+  set(
+    "titleAssuntoTempo",
+    `Tempo Mediano de Resolução por Assuntos · ${texto}`,
+  );
+  set(
+    "subAssuntoTempo",
+    `Mediana de horas para os mesmos top 10 assuntos · ${periodo}`,
+  );
   set("kpiVolumeSub", `Período: ${texto}`);
 }
 
@@ -119,6 +127,30 @@ const dadosPadrao = {
     { label: "Impressora › Instalação / Reparo", v2025: 56, v2026: 0 },
     { label: "Suporte › Hardware", v2025: 40, v2026: 0 },
     { label: "PipeRun › Suporte PipeRun", v2025: 39, v2026: 0 },
+  ],
+  assuntosTempo: [
+    { label: "SAP", tempoBase: 47.9, tempoComp: null },
+    {
+      label: "Programas Diversos (S9, Nasajon, Active e etc...)",
+      tempoBase: 28.4,
+      tempoComp: null,
+    },
+    { label: "E-mail", tempoBase: 68.2, tempoComp: null },
+    { label: "Suporte › Notebook / Desktop", tempoBase: 77.3, tempoComp: null },
+    {
+      label: "Acesso › Novos Colaboradores",
+      tempoBase: 173.0,
+      tempoComp: null,
+    },
+    { label: "Sults", tempoBase: 19.4, tempoComp: null },
+    { label: "Suporte › Software", tempoBase: 15.6, tempoComp: null },
+    {
+      label: "Impressora › Instalação / Reparo",
+      tempoBase: 26.0,
+      tempoComp: null,
+    },
+    { label: "Suporte › Hardware", tempoBase: 18.0, tempoComp: null },
+    { label: "PipeRun › Suporte PipeRun", tempoBase: 40.0, tempoComp: null },
   ],
   responsaveis: [
     { nome: "Marcos Barros", total: 451, nota: 4.92, noPrazo: 249 },
@@ -399,6 +431,25 @@ function processarChamados(chamados) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
+  // Tempo Mediano de Resolução por Assunto — usa os mesmos top 10 assuntos
+  // já selecionados acima, para manter os dois gráficos comparáveis.
+  // Não altera nenhum cálculo existente (SLA, volume, KPIs) — campo aditivo.
+  const assTempoMap = {};
+  filtrado.forEach((d) => {
+    if (!d.dataEfetiva || !d.aberto) return;
+    const ass = d.assunto.replace(">", "›").trim() || "Outros",
+      ano = d.aberto.getFullYear();
+    if (!assTempoMap[ass]) assTempoMap[ass] = { base: [], comp: [] };
+    const horas = (d.dataEfetiva - d.aberto) / 3600000;
+    if (ano === anoBase) assTempoMap[ass].base.push(horas);
+    if (ano === anoComp) assTempoMap[ass].comp.push(horas);
+  });
+  const assuntosTempo = assArr.map((a) => ({
+    label: a.label,
+    tempoBase: medianaArr(assTempoMap[a.label]?.base || []),
+    tempoComp: medianaArr(assTempoMap[a.label]?.comp || []),
+  }));
+
   const respMap = {};
   filtrado.forEach((d) => {
     const nome = d.responsavel || "Sem responsável";
@@ -478,6 +529,7 @@ function processarChamados(chamados) {
     cat2025: catArr.map((c) => c.v2025),
     cat2026: catArr.map((c) => c.v2026),
     assuntosRaw: assArr,
+    assuntosTempo,
     responsaveis: respArr,
     totalGeral: totalBase + totalComp,
     avaliados,
@@ -1029,6 +1081,111 @@ function initCharts(d) {
       },
     },
   });
+
+  // Tempo Mediano de Resolução por Assunto — mesmo estilo visual do gráfico
+  // "Tempo Mediano de Resolução por Mês" (linha com pontos anotados)
+  const atTempo = d.assuntosTempo || [];
+  const assTempoBase = atTempo.map((a) => a.tempoBase ?? undefined);
+  const assTempoComp = atTempo.map((a) => a.tempoComp ?? undefined);
+
+  charts.assuntoTempo = new Chart(
+    document.getElementById("chartAssuntoTempo"),
+    {
+      type: "line",
+      data: {
+        labels: atTempo.map((a) => a.label),
+        datasets: [
+          {
+            label: `Ano ${anoBase}`,
+            data: assTempoBase,
+            borderColor: "#7eaadf",
+            backgroundColor: "transparent",
+            borderWidth: 2.5,
+            tension: 0.2,
+            pointRadius: 4,
+            pointBackgroundColor: "#7eaadf",
+            spanGaps: false,
+          },
+          {
+            label: `Ano ${anoComp}`,
+            data: assTempoComp,
+            borderColor: "#52b899",
+            backgroundColor: "transparent",
+            borderWidth: 2.5,
+            tension: 0.2,
+            pointRadius: 4,
+            pointBackgroundColor: "#52b899",
+            spanGaps: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 28, bottom: 10 } },
+        plugins: {
+          legend: {
+            position: "top",
+            labels: { boxWidth: 14, font: { size: 11 }, padding: 12 },
+          },
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                const v = ctx.parsed.y;
+                return v != null
+                  ? ` ${ctx.dataset.label}: ${v.toFixed(1)}h`
+                  : ` ${ctx.dataset.label}: sem dados`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 10 }, maxRotation: 35, minRotation: 20 },
+          },
+          y: {
+            grid: { color: grid },
+            beginAtZero: true,
+            ticks: { callback: (v) => v + "h" },
+          },
+        },
+      },
+      plugins: [
+        {
+          id: "assTempoAnnotation",
+          afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            [0, 1].forEach((di) => {
+              const ds = chart.data.datasets[di],
+                meta = chart.getDatasetMeta(di);
+              if (meta.hidden) return;
+              meta.data.forEach((point, i) => {
+                const v = ds.data[i];
+                if (v == null || v === undefined) return;
+                const label = v.toFixed(1) + "h",
+                  yPos = point.y - 18;
+                ctx.save();
+                const tw = ctx.measureText(label).width + 10,
+                  th = 14;
+                ctx.fillStyle =
+                  di === 0 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
+                ctx.beginPath();
+                ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
+                ctx.fill();
+                ctx.font = 'bold 10px "Aptos Narrow",sans-serif';
+                ctx.fillStyle = ds.borderColor;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(label, point.x, yPos);
+                ctx.restore();
+              });
+            });
+          },
+        },
+      ],
+    },
+  );
 }
 
 function renderTabela(responsaveis) {
@@ -1081,40 +1238,238 @@ function atualizarKPIs(d) {
     `${total.toLocaleString("pt-BR")} chamados · Depto TI`;
 }
 
+// ── HELPERS DE INTERPRETAÇÃO EXECUTIVA (somente leitura dos dados já calculados) ──
+function _mediaSimples(arr) {
+  const v = (arr || []).filter((x) => x != null);
+  return v.length
+    ? +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2)
+    : null;
+}
+function _medianaSimples(arr) {
+  const v = (arr || []).filter((x) => x != null).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const meio = Math.floor(v.length / 2);
+  return +(v.length % 2 !== 0 ? v[meio] : (v[meio - 1] + v[meio]) / 2).toFixed(
+    1,
+  );
+}
+function _mediaPonderada(pctArr, pesoArr) {
+  let num = 0,
+    den = 0;
+  (pctArr || []).forEach((p, i) => {
+    const w = (pesoArr || [])[i];
+    if (p != null && w) {
+      num += p * w;
+      den += w;
+    }
+  });
+  return den ? +(num / den).toFixed(1) : null;
+}
+function _classificarVariacao(pct) {
+  const p = Math.abs(pct);
+  if (p < 3)
+    return { texto: "estabilidade operacional", cor: "var(--accent2)" };
+  if (pct >= 15)
+    return { texto: "aumento expressivo da demanda", cor: "var(--accent3)" };
+  if (pct >= 3)
+    return { texto: "crescimento controlado", cor: "var(--accent4)" };
+  if (pct <= -15)
+    return { texto: "redução expressiva do volume", cor: "var(--accent4)" };
+  return { texto: "redução moderada do volume", cor: "var(--accent4)" };
+}
+function _classificarSLA(v) {
+  if (v >= 90)
+    return { texto: "desempenho acima da meta", cor: "var(--accent4)" };
+  if (v >= 75)
+    return {
+      texto: "dentro de faixa operacional aceitável, porém abaixo da meta",
+      cor: "var(--accent5)",
+    };
+  return {
+    texto: "abaixo da meta e requer atenção da gestão",
+    cor: "var(--accent3)",
+  };
+}
+
 function calcularInsights(d) {
   const { anoBase, anoComp } = getPeriodo();
   const meses = getMesesLabels();
+
+  // ── Volume e tendência ──
   const tBase = d.volume2025.reduce((a, b) => a + b, 0),
     tComp = d.volume2026.reduce((a, b) => a + b, 0);
-  const varPct = tComp > 0 ? (((tBase - tComp) / tComp) * 100).toFixed(1) : 0;
-  const sinal =
-    tBase > tComp ? "crescimento" : tBase < tComp ? "recuo" : "estabilidade";
+  const varPct = tComp > 0 ? +(((tBase - tComp) / tComp) * 100).toFixed(1) : 0;
+  const variacao = _classificarVariacao(varPct);
+
+  // ── Categoria líder e categoria com maior crescimento (apenas entre as top categorias exibidas) ──
+  const catLider =
+    d.categorias && d.categorias.length
+      ? {
+          nome: d.categorias[0],
+          vBase: d.cat2025[0] || 0,
+          vComp: d.cat2026[0] || 0,
+        }
+      : null;
+  const catShare =
+    catLider && tBase > 0 ? +((catLider.vBase / tBase) * 100).toFixed(1) : null;
+
+  let catCresceu = null,
+    catCresceuPct = -Infinity;
+  (d.categorias || []).forEach((nome, i) => {
+    const vB = d.cat2025[i] || 0,
+      vC = d.cat2026[i] || 0;
+    if (vC > 0) {
+      const g = ((vB - vC) / vC) * 100;
+      if (g > catCresceuPct) {
+        catCresceuPct = g;
+        catCresceu = { nome, vB, vC, g: +g.toFixed(1) };
+      }
+    }
+  });
+  const temCrescimentoRelevante = catCresceu && catCresceu.g >= 10;
+
+  // ── Assunto líder (granularidade mais fina que categoria) ──
   const assTop = [...d.assuntosRaw].sort((a, b) => b.v2025 - a.v2025)[0];
-  const slaStatus =
-    (d.slaGlobal || 0) >= 90
-      ? `<strong style="color:#1a7a5e">acima da meta de 90%</strong>`
-      : `<strong style="color:#c0392b">abaixo da meta de 90%</strong>`;
+
+  // ── Sazonalidade: mês de maior e menor volume no ano base ──
+  const volPorMes = d.volume2025.map((v, i) => ({ mes: meses[i], v }));
+  const mesMax = [...volPorMes].sort((a, b) => b.v - a.v)[0];
+  const mesMin = [...volPorMes].sort((a, b) => a.v - b.v)[0];
+
+  // ── SLA: combinado (igual ao KPI) + comparação aproximada entre os dois anos ──
+  const slaStatus = _classificarSLA(d.slaGlobal || 0);
+  const slaBaseAprox = _mediaPonderada(d.sla2025, d.volume2025);
+  const slaCompAprox = _mediaPonderada(d.sla2026, d.volume2026);
+  let slaTendenciaTxt = "";
+  if (slaBaseAprox != null && slaCompAprox != null) {
+    const diffSla = +(slaBaseAprox - slaCompAprox).toFixed(1);
+    slaTendenciaTxt =
+      diffSla > 1
+        ? `melhora de ${diffSla}pp frente a ${anoComp}`
+        : diffSla < -1
+          ? `queda de ${Math.abs(diffSla)}pp frente a ${anoComp}`
+          : `estável frente a ${anoComp}`;
+  }
+
+  // ── Satisfação ──
+  const satBase = _mediaSimples(d.sat2025),
+    satComp = _mediaSimples(d.sat2026);
+  let satTendenciaTxt = "";
+  if (satBase != null && satComp != null) {
+    const diffSat = +(satBase - satComp).toFixed(2);
+    satTendenciaTxt =
+      diffSat > 0.03
+        ? "melhora da satisfação"
+        : diffSat < -0.03
+          ? "queda na satisfação — ponto de atenção"
+          : "satisfação estável";
+  }
+
+  // ── Tempo mediano: mês mais crítico ──
+  const tempoPorMes = (d.tempoMediano2025 || [])
+    .map((v, i) => ({ mes: meses[i], v }))
+    .filter((x) => x.v != null);
+  const tempoPico = tempoPorMes.length
+    ? [...tempoPorMes].sort((a, b) => b.v - a.v)[0]
+    : null;
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ÁREA 1 — ANÁLISE DINÂMICA (resumo executivo)
+  // ══════════════════════════════════════════════════════════════════════
   const c = document.getElementById("insightTextoDashboard");
-  if (c)
-    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;">
-    <div>🔹 <strong>Tendência:</strong> Em ${meses[0]}–${meses[meses.length - 1]} ${anoBase}, a TI processou <strong>${tBase.toLocaleString("pt-BR")} chamados</strong>${tComp ? " vs " + tComp.toLocaleString("pt-BR") + " em " + anoComp + " — " + sinal + " de " + Math.abs(varPct) + "%" : ""}.
-    </div>
-    ${assTop && assTop.v2025 > 0 ? `<div>🔹 <strong>Destaque:</strong> <strong style="color:var(--accent)">"${assTop.label}"</strong> liderou com <strong>${assTop.v2025} chamados</strong> em ${anoBase}.</div>` : ""}
-    <div>🔹 <strong>SLA:</strong> <strong style="color:${(d.slaGlobal || 0) >= 90 ? "#1a7a5e" : "#c0392b"};font-weight:bold">${(d.slaGlobal || 0).toFixed(1)}%</strong> — ${slaStatus}. Considerando chamados Resolvidos e Concluídos como equivalentes.</div>
-  </div>`;
-  const difs = d.volume2025.map((v, i) => ({
-    mes: meses[i],
-    vBase: v,
-    vComp: d.volume2026[i] || 0,
-    diff: v - (d.volume2026[i] || 0),
-  }));
-  const maiorVol = [...difs].sort((a, b) => b.vBase - a.vBase)[0];
+  if (c) {
+    const linhas = [];
+
+    linhas.push(
+      `🔹 <strong>Volume:</strong> ${tBase.toLocaleString("pt-BR")} chamados em ${meses[0]}–${meses[meses.length - 1]} ${anoBase}${tComp ? ` (vs ${tComp.toLocaleString("pt-BR")} em ${anoComp})` : ""} — <strong style="color:${variacao.cor}">${variacao.texto}</strong>${tComp ? ` de ${Math.abs(varPct)}%` : ""}.`,
+    );
+
+    if (catLider && catLider.vBase > 0) {
+      linhas.push(
+        `🔹 <strong>Categoria líder:</strong> <strong style="color:var(--accent)">"${catLider.nome}"</strong> concentra <strong>${catShare}%</strong> do volume (${catLider.vBase} chamados)${assTop && assTop.v2025 > 0 ? `; o assunto mais recorrente é <strong>"${assTop.label}"</strong> (${assTop.v2025} chamados)` : ""}.`,
+      );
+    }
+
+    if (temCrescimentoRelevante) {
+      linhas.push(
+        `🔹 <strong>Alerta de demanda:</strong> <strong style="color:var(--accent3)">"${catCresceu.nome}"</strong> cresceu <strong>+${catCresceu.g}%</strong> frente a ${anoComp} (${catCresceu.vC} → ${catCresceu.vB} chamados) — merece investigação de causa raiz.`,
+      );
+    }
+
+    linhas.push(
+      `🔹 <strong>Sazonalidade:</strong> <strong>${mesMax.mes}</strong> concentrou o maior volume (${mesMax.v} chamados); <strong>${mesMin.mes}</strong> teve o menor (${mesMin.v}).`,
+    );
+
+    linhas.push(
+      `🔹 <strong>SLA:</strong> <strong style="color:${slaStatus.cor};font-weight:bold">${(d.slaGlobal || 0).toFixed(1)}%</strong> — ${slaStatus.texto}${slaTendenciaTxt ? `, com ${slaTendenciaTxt}` : ""}.`,
+    );
+
+    linhas.push(
+      `🔹 <strong>Satisfação e Tempo de Resposta:</strong> nota média ${satBase != null ? satBase.toFixed(2) : "—"}${satTendenciaTxt ? ` (${satTendenciaTxt})` : ""}; tempo mediano de resolução em <strong>${(d.tempoMediano || 0).toFixed(1)}h</strong>${tempoPico ? `, com pico em <strong>${tempoPico.mes}</strong> (${tempoPico.v.toFixed(1)}h)` : ""}.`,
+    );
+
+    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:9px;">${linhas.map((l) => `<div>${l}</div>`).join("")}</div>`;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ÁREA 2 — GARGALOS DO PERÍODO
+  // ══════════════════════════════════════════════════════════════════════
   const l = document.getElementById("insightLateralOperacional");
-  if (l)
-    l.innerHTML = `
-    <p><strong style="color:#1c2133">Maior volume:</strong> <strong>${maiorVol?.mes}</strong> — ${maiorVol?.vBase} chamados em ${anoBase}.</p>
-    ${assTop && assTop.v2025 > 0 ? `<p><strong style="color:#1c2133">Foco principal:</strong> <strong>${assTop.label}</strong> com ${assTop.v2025} ocorrências.</p>` : ""}
-    <p><strong style="color:#1c2133">SLA (Resolvidos + Concluídos):</strong> ${(d.slaGlobal || 0).toFixed(1)}%</p>`;
+  if (l) {
+    const gargalos = [];
+
+    if (catLider && catShare != null && catShare >= 20) {
+      gargalos.push(
+        `<p><strong style="color:#1c2133">Concentração de demanda:</strong> <strong>"${catLider.nome}"</strong> responde por <strong>${catShare}%</strong> de todos os chamados — risco de gargalo se a equipe responsável estiver subdimensionada.</p>`,
+      );
+    }
+
+    // Mês com pior SLA no ano base
+    const slaPorMes = (d.sla2025 || [])
+      .map((v, i) => ({ mes: meses[i], v }))
+      .filter((x) => x.v != null);
+    if (slaPorMes.length) {
+      const piorSla = [...slaPorMes].sort((a, b) => a.v - b.v)[0];
+      if (piorSla.v < 75) {
+        gargalos.push(
+          `<p><strong style="color:#1c2133">Mês mais crítico (SLA):</strong> <strong>${piorSla.mes}</strong> registrou apenas <strong style="color:var(--accent3)">${piorSla.v.toFixed(1)}%</strong> dentro do prazo.</p>`,
+        );
+      }
+    }
+
+    if (tempoPico && tempoPico.v >= 48) {
+      gargalos.push(
+        `<p><strong style="color:#1c2133">Tempo de resolução elevado:</strong> <strong>${tempoPico.mes}</strong> teve mediana de <strong>${tempoPico.v.toFixed(1)}h</strong> (~${(tempoPico.v / 24).toFixed(1)} dias) para concluir chamados.</p>`,
+      );
+    }
+
+    if (assTop && assTop.v2025 > 0 && tBase > 0) {
+      const assShare = +((assTop.v2025 / tBase) * 100).toFixed(1);
+      if (assShare >= 8) {
+        gargalos.push(
+          `<p><strong style="color:#1c2133">Assunto recorrente:</strong> <strong>"${assTop.label}"</strong> representa <strong>${assShare}%</strong> do volume total — candidato a automação ou base de conhecimento.</p>`,
+        );
+      }
+    }
+
+    if (temCrescimentoRelevante) {
+      gargalos.push(
+        `<p><strong style="color:#1c2133">Oportunidade de atenção:</strong> crescimento de <strong>+${catCresceu.g}%</strong> em <strong>"${catCresceu.nome}"</strong> pode exigir realocação de recursos.</p>`,
+      );
+    }
+
+    if (!gargalos.length) {
+      gargalos.push(
+        `<p><strong style="color:var(--accent4)">Nenhum gargalo crítico identificado</strong> — operação dentro de parâmetros saudáveis no período analisado.</p>`,
+      );
+    }
+
+    gargalos.push(
+      `<p style="margin-top:4px;padding-top:8px;border-top:1px solid var(--border);"><strong style="color:#1c2133">SLA do período:</strong> ${(d.slaGlobal || 0).toFixed(1)}% (Resolvidos + Concluídos)</p>`,
+    );
+
+    l.innerHTML = gargalos.join("");
+  }
 }
 
 function renderDashboard(d) {
