@@ -4,7 +4,10 @@ const SULTS_API = "https://api.sults.com.br/api/v1/chamado/ticket";
 const DEPTO_TI = 9;
 const USUARIO_ID = 1617;
 
-// ── PERÍODO DINÂMICO ──────────────────────────────────────────────────────
+// ⚠️ Link CSV publicado do Google Sheets
+const GOOGLE_SHEETS_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTzs4z4cP6FIKJYr9qGOnA_mcl8giq7MTx6Q9lqqAOrpgT62qwrWvX9Q1o5XvMZeqeXDQzJC5GaLGDM/pub?output=csv";
+
 const NOMES_MESES = [
   "Janeiro",
   "Fevereiro",
@@ -21,130 +24,150 @@ const NOMES_MESES = [
 ];
 
 function getPeriodo() {
-  const anoBase = parseInt(document.getElementById("anoBase")?.value || 2025);
+  const anoBase = parseInt(document.getElementById("anoBase")?.value || 2026);
   const mesInicio = parseInt(document.getElementById("mesInicio")?.value || 1);
-  const mesFim = parseInt(document.getElementById("mesFim")?.value || 5);
-  const anoComp = anoBase - 1;
-  return { anoBase, anoComp, mesInicio, mesFim };
+  const mesFim = parseInt(document.getElementById("mesFim")?.value || 6);
+  return { anoBase, anoComp: anoBase - 1, mesInicio, mesFim };
 }
-
 function getMesesLabels() {
   const { mesInicio, mesFim } = getPeriodo();
-  const labels = [];
-  for (let m = mesInicio; m <= mesFim; m++) labels.push(NOMES_MESES[m - 1]);
-  return labels;
+  const l = [];
+  for (let m = mesInicio; m <= mesFim; m++) l.push(NOMES_MESES[m - 1]);
+  return l;
 }
-
 function getMesesNum() {
   const { mesInicio, mesFim } = getPeriodo();
-  const nums = [];
-  for (let m = mesInicio; m <= mesFim; m++) nums.push(m);
-  return nums;
+  const n = [];
+  for (let m = mesInicio; m <= mesFim; m++) n.push(m);
+  return n;
 }
 
 function atualizarResumo() {
   const { anoBase, anoComp, mesInicio, mesFim } = getPeriodo();
-  const mInicio = NOMES_MESES[mesInicio - 1];
-  const mFim = NOMES_MESES[mesFim - 1];
-  const periodo = mesInicio === mesFim ? `${mInicio}` : `${mInicio}–${mFim}`;
+  const mI = NOMES_MESES[mesInicio - 1],
+    mF = NOMES_MESES[mesFim - 1];
+  const periodo = mesInicio === mesFim ? mI : `${mI}–${mF}`;
   const texto = `${periodo} ${anoBase} vs ${anoComp}`;
-
-  const set = (id, val) => {
+  const set = (id, v) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = val;
+    if (el) el.textContent = v;
   };
-
   set("periodoResumo", texto);
   set("subtitlePeriodo", `Análise Comparativa de Desempenho · ${texto}`);
   set("footerPeriodo", texto);
-
-  // Títulos dinâmicos dos gráficos
   set("titleVolume", `Volume de Chamados por Mês · ${texto}`);
   set("subVolume", `Comparativo sazonal ${periodo} (${anoBase} vs ${anoComp})`);
   set("titleCategorias", `Categorias: ${anoBase} vs ${anoComp}`);
   set(
     "subCategorias",
-    `Comparativo de volumetria das principais frentes · ${periodo}`,
+    `Top 8 categorias com ≥5 chamados · ${periodo} · não soma com o total do KPI`,
   );
   set("titleSLA", `SLA por Mês: ${anoBase} vs ${anoComp}`);
-  set("titleSat", `Evolução da Satisfação Média · ${texto}`);
-  set(
-    "subSat",
-    `Comparativo das notas de atendimento · ${periodo} (${anoBase} vs ${anoComp})`,
-  );
-  set("titlePerf", `Performance da Equipe de TI · ${periodo} ${anoBase}`);
-  set("subPerf", `Métricas agregadas dos atendimentos — ${texto}`);
-  set(
-    "titleAssuntos",
-    `Top 10 Assuntos Mais Recorrentes: ${anoBase} vs ${anoComp}`,
-  );
+  set("titleSat", `Satisfação Média · ${texto}`);
+  set("subSat", `Notas de atendimento · ${periodo} (${anoBase} vs ${anoComp})`);
+  set("titlePerf", `Performance da Equipe · ${periodo} ${anoBase}`);
+  set("subPerf", `Métricas agregadas — ${texto}`);
+  set("titleAssuntos", `Top 10 Assuntos: ${anoBase} vs ${anoComp}`);
   set(
     "subAssuntos",
-    `Ordenado por volume total · ${periodo} (${anoBase} vs ${anoComp})`,
+    `Top 10 assuntos · ${periodo} · não soma com o total do KPI`,
   );
   set("kpiVolumeSub", `Período: ${texto}`);
 }
+
 let dadosAtivos = null;
 
+// ── DADOS PADRÃO — Jan-Jun 2026 vs 2025 (dados reais combinados) ─────────
 const dadosPadrao = {
-  volume2025: [241, 230, 163, 197, 201],
-  volume2026: [200, 129, 163, 225, 229],
-  sla2025: [100.0, 94.4, 94.0, 90.8, 94.0],
-  sla2026: [100.0, 92.1, 79.2, 80.6, 96.8],
-  sat2025: [4.82, 4.87, 4.87, 4.88, 4.87],
-  sat2026: [4.89, 4.79, 4.91, 4.89, 4.91],
+  volume2025: [193, 125, 163, 224, 229, 284],
+  volume2026: [257, 230, 163, 197, 201, 132],
+  sla2025: [58.0, 52.8, 54.6, 48.2, 52.8, 63.4],
+  sla2026: [39.7, 53.0, 44.2, 39.1, 55.2, 48.5],
+  sat2025: [4.89, 4.8, 4.91, 4.89, 4.91, 4.93],
+  sat2026: [null, null, null, null, null, null],
   categorias: [
-    "Acesso",
-    "Suporte",
-    "Impressora",
-    "PipeRun",
-    "Shop 9",
-    "E-mail",
-    "Telefonia",
     "SAP",
+    "E-mail",
+    "Suporte",
+    "Programas Div.",
+    "Sults",
+    "PipeRun",
+    "Impressora",
+    "Acesso",
   ],
-  cat2025: [382, 260, 82, 72, 65, 45, 30, 28],
-  cat2026: [333, 238, 70, 62, 57, 38, 28, 21],
+  cat2025: [205, 151, 129, 123, 94, 91, 88, 85],
+  cat2026: [0, 0, 0, 0, 0, 0, 0, 0],
   assuntosRaw: [
-    { label: "Acesso › Novos Colaboradores", v2025: 104, v2026: 218 },
-    { label: "Acesso › E-mail / Configuração", v2025: 232, v2026: 124 },
-    { label: "Acesso › SAP", v2025: 157, v2026: 139 },
-    { label: "Infra › Problemas Físicos", v2025: 73, v2026: 127 },
-    { label: "Acesso › Sults", v2025: 44, v2026: 153 },
-    { label: "Suporte › Programas Diversos", v2025: 81, v2026: 93 },
-    { label: "Impressora › Instalação/Toner", v2025: 80, v2026: 77 },
-    { label: "PipeRun › Acesso e Suporte", v2025: 52, v2026: 69 },
-    { label: "Suporte › Notebook / Desktop", v2025: 45, v2026: 65 },
-    { label: "Suporte › Software", v2025: 66, v2026: 41 },
+    { label: "SAP", v2025: 154, v2026: 0 },
+    {
+      label: "Programas Diversos (S9, Nasajon, Active e etc...)",
+      v2025: 123,
+      v2026: 0,
+    },
+    { label: "E-mail", v2025: 110, v2026: 0 },
+    { label: "Suporte › Notebook / Desktop", v2025: 78, v2026: 0 },
+    { label: "Acesso › Novos Colaboradores", v2025: 77, v2026: 0 },
+    { label: "Sults", v2025: 71, v2026: 0 },
+    { label: "Suporte › Software", v2025: 69, v2026: 0 },
+    { label: "Impressora › Instalação / Reparo", v2025: 56, v2026: 0 },
+    { label: "Suporte › Hardware", v2025: 40, v2026: 0 },
+    { label: "PipeRun › Suporte PipeRun", v2025: 39, v2026: 0 },
   ],
   responsaveis: [
-    { nome: "Wiclem Lopes Da Silva", total: 682, nota: 4.85, noPrazo: 385 },
-    { nome: "Marcos Barros", total: 576, nota: 4.88, noPrazo: 312 },
+    { nome: "Marcos Barros", total: 451, nota: 4.92, noPrazo: 249 },
+    { nome: "Wiclem Lopes", total: 357, nota: 4.89, noPrazo: 212 },
     {
       nome: "Christian Wyterlin Silveira",
-      total: 372,
-      nota: 4.8,
-      noPrazo: 161,
+      total: 244,
+      nota: 4.82,
+      noPrazo: 120,
     },
-    { nome: "Danielly Cavalieri", total: 130, nota: 4.86, noPrazo: 49 },
-    { nome: "Eduardo Alves", total: 95, nota: 4.92, noPrazo: 38 },
-    { nome: "Marcelo Lopes", total: 92, nota: 4.83, noPrazo: 52 },
-    { nome: "Tiago Gomes", total: 26, nota: 4.92, noPrazo: 12 },
-    { nome: "Plinio Bellas", total: 6, nota: 5.0, noPrazo: 1 },
+    { nome: "Tiago da Silva Gomes", total: 56, nota: 4.97, noPrazo: 33 },
+    { nome: "Marcelo Lourenço Lopes", total: 57, nota: 4.87, noPrazo: 35 },
+    { nome: "Danielly Cavalieri", total: 38, nota: 4.9, noPrazo: 22 },
+    { nome: "Plinio Bellas", total: 10, nota: 5.0, noPrazo: 4 },
   ],
-  totalGeral: 1979,
-  avaliados: 344,
-  totalFiltro: 515,
-  slaGlobal: 93.0,
+  totalGeral: 2398,
+  avaliados: 820,
+  totalFiltro: 2398,
+  slaGlobal: 55.5,
   tempoMediano: 40.5,
+  total2025: 1218,
+  total2026: 1180,
+  anoBase: 2026,
+  anoComp: 2025,
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const parseDate = (v) => {
   if (!v) return null;
   if (v instanceof Date) return v;
-  const t = new Date(v);
-  return isNaN(t) ? null : t;
+  if (typeof v === "number") {
+    // Serial date do Excel/Sheets
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    return new Date(excelEpoch.getTime() + v * 86400000);
+  }
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return null;
+    // Formato dd/MM/yyyy HH:mm:ss ou dd/MM/yyyy
+    if (s.includes("/")) {
+      const [datePart, timePart] = s.split(" ");
+      const parts = datePart.split("/");
+      if (parts.length === 3) {
+        let [d2, m2, y2] = parts;
+        if (y2.length === 2) y2 = "20" + y2;
+        const dt = new Date(
+          `${y2}-${m2.padStart(2, "0")}-${d2.padStart(2, "0")}T${timePart || "00:00:00"}`,
+        );
+        if (!isNaN(dt)) return dt;
+      }
+    }
+    // Formato ISO ou outros aceitos nativamente
+    const t = new Date(s);
+    return isNaN(t) ? null : t;
+  }
+  return null;
 };
 
 const headers = {
@@ -152,50 +175,74 @@ const headers = {
   "Content-Type": "application/json;charset=UTF-8",
 };
 
-// ── BUSCA API SULTS (paralela) ────────────────────────────────────────────
+// ── BUSCA PLANILHA DO GOOGLE SHEETS (CSV) ─────────────────────────────────
+async function buscarPlanilhaGoogleSheets() {
+  if (!GOOGLE_SHEETS_URL)
+    throw new Error("Link do Google Sheets não configurado");
+  // Cache-buster para garantir dados sempre atualizados
+  const url = `${GOOGLE_SHEETS_URL}&_t=${Date.now()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Erro ${res.status} ao acessar o Google Sheets`);
+  const csvText = await res.text();
+  const workbook = XLSX.read(csvText, {
+    type: "string",
+    cellDates: true,
+    raw: false,
+  });
+  return processarPlanilha(workbook);
+}
+
+// ── BUSCA API SULTS (com concorrência controlada) ─────────────────────────
 async function buscarTodosChamados(onProgresso) {
   const { anoComp, mesInicio, mesFim, anoBase } = getPeriodo();
-
   const abertoStart = `${anoComp}-${String(mesInicio).padStart(2, "0")}-01T00:00:00Z`;
   const abertoEnd = `${anoBase}-${String(mesFim).padStart(2, "0")}-${new Date(anoBase, mesFim, 0).getDate()}T23:59:59Z`;
   const baseUrl = `${SULTS_API}?limit=100&departamento=${DEPTO_TI}&abertoStart=${abertoStart}&abertoEnd=${abertoEnd}`;
 
-  // 1. Busca a primeira página para descobrir totalPage
-  const primeiraRes = await fetch(`${baseUrl}&start=0`, {
-    method: "GET",
-    headers,
-  });
-  if (!primeiraRes.ok)
-    throw new Error(`Erro ${primeiraRes.status}: ${primeiraRes.statusText}`);
-  const primeiraJson = await primeiraRes.json();
+  const fetchPagina = async (p, tentativas = 3) => {
+    for (let i = 0; i < tentativas; i++) {
+      try {
+        const res = await fetch(`${baseUrl}&start=${p}`, {
+          method: "GET",
+          headers,
+        });
+        if (!res.ok) throw new Error(`Erro ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        if (i === tentativas - 1) throw err;
+        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+      }
+    }
+  };
+
+  const primeiraJson = await fetchPagina(0);
   const totalPaginas = primeiraJson.totalPage || 1;
   const todos = [...(primeiraJson.data || [])];
-
   if (onProgresso) onProgresso(1, totalPaginas, todos.length);
 
   if (totalPaginas > 1) {
-    // 2. Dispara todas as páginas restantes em paralelo
-    const promises = [];
-    for (let p = 1; p < totalPaginas; p++) {
-      promises.push(
-        fetch(`${baseUrl}&start=${p}`, { method: "GET", headers })
-          .then((r) => r.json())
-          .then((json) => {
-            todos.push(...(json.data || []));
-            if (onProgresso)
-              onProgresso(todos.length, totalPaginas * 100, todos.length);
-            return json;
-          }),
-      );
-    }
-    await Promise.all(promises);
+    const CONCORRENCIA = 3;
+    let proxima = 1;
+    const trabalhador = async () => {
+      while (proxima < totalPaginas) {
+        const p = proxima++;
+        const json = await fetchPagina(p);
+        todos.push(...(json.data || []));
+        if (onProgresso)
+          onProgresso(todos.length, totalPaginas * 100, todos.length);
+        await new Promise((r) => setTimeout(r, 80));
+      }
+    };
+    const workers = Array.from(
+      { length: Math.min(CONCORRENCIA, totalPaginas - 1) },
+      trabalhador,
+    );
+    await Promise.all(workers);
   }
-
   if (onProgresso) onProgresso(totalPaginas, totalPaginas, todos.length);
   return todos;
 }
 
-// ── BUSCA CHAMADOS PENDENTES (resolvidos não concluídos) ──────────────────
 async function buscarChamadosPendentes() {
   const res = await fetch(
     `${SULTS_API}?start=0&limit=100&departamento=${DEPTO_TI}&situacao=3`,
@@ -206,16 +253,14 @@ async function buscarChamadosPendentes() {
   return json.data || [];
 }
 
-// ── CONCLUIR CHAMADO ──────────────────────────────────────────────────────
 async function concluirChamado(chamadoId) {
-  const body = JSON.stringify({ pessoaId: USUARIO_ID });
   const res = await fetch(`${SULTS_API}/${chamadoId}/action/conclude`, {
     method: "PUT",
     headers: {
       Authorization: SULTS_TOKEN,
       "Content-Type": "application/json;charset=UTF-8",
     },
-    body,
+    body: JSON.stringify({ pessoaId: USUARIO_ID }),
   });
   if (!res.ok) {
     let msg = `Erro ${res.status}`;
@@ -228,12 +273,11 @@ async function concluirChamado(chamadoId) {
   return true;
 }
 
-// ── PROCESSAMENTO DOS CHAMADOS ────────────────────────────────────────────
+// ── PROCESSAMENTO DOS CHAMADOS ─────────────────────────────────────────────
 function processarChamados(chamados) {
   const { anoBase, anoComp, mesInicio, mesFim } = getPeriodo();
   const mesesNum = getMesesNum();
 
-  // ETAPA 1: Mapear campos da API
   const dados = chamados.map((c) => ({
     id: c.id,
     aberto: parseDate(c.aberto),
@@ -243,65 +287,53 @@ function processarChamados(chamados) {
     assunto: c.assunto?.nome || "",
     responsavel: c.responsavel?.nome || "",
     satisfacao: c.avaliacaoNota || null,
-    situacao: c.situacao, // 1=Novo 2=Concluído 3=Resolvido 4=Em Andamento 5=Ag.Sol 6=Ag.Resp
+    situacao: c.situacao,
   }));
 
-  // ETAPA 2: Filtrar pelo período selecionado (ano base E ano comparativo)
-  // Chamados sem data de abertura são descartados — único motivo de exclusão
   const filtrado = dados.filter((d) => {
     if (!d.aberto) return false;
-    const ano = d.aberto.getFullYear();
-    const mes = d.aberto.getMonth() + 1;
+    const ano = d.aberto.getFullYear(),
+      mes = d.aberto.getMonth() + 1;
     return (
       (ano === anoBase || ano === anoComp) && mes >= mesInicio && mes <= mesFim
     );
   });
   if (!filtrado.length) return null;
 
-  // ETAPA 3: Calcular SLA para cada chamado
-  // BRUTO  = concluído dentro do prazo (sem nenhum ajuste)
-  // CORRIGIDO = bruto + correções de processo acordadas
   filtrado.forEach((d) => {
+    // Resolvido e Concluído são tratados como equivalentes:
+    // ambos indicam que o problema foi solucionado, com ou sem o
+    // encerramento formal no sistema
+    d.dataEfetiva = d.concluido || d.resolvido || null;
+
     const prazoHoras =
       d.prazo && d.aberto ? (d.prazo - d.aberto) / 3600000 : null;
+    // G1: Prazo cadastrado com menos de 24h — erro de configuração no Sults,
+    // não reflete um SLA real acordado. Tratado como "no prazo".
+    const prazoIrreal =
+      prazoHoras !== null && prazoHoras > 0 && prazoHoras < 24;
+    // G2: Sem prazo cadastrado — campo obrigatório não preenchido.
+    const semPrazo = !d.prazo;
 
-    // SLA BRUTO — fórmula pura: concluído E dentro do prazo
-    d.noPrazoBruto = !!(d.concluido && d.prazo && d.concluido <= d.prazo);
-
-    // SLA CORRIGIDO — aplica correções de processo acordadas em reunião
-    // Cada correção justifica por que o chamado é tratado como "no prazo"
-    let motivo = null;
-
-    // G1: Prazo cadastrado com menos de 24h — erro de configuração no Sults
-    if (prazoHoras !== null && prazoHoras > 0 && prazoHoras < 24)
-      motivo = "Prazo irreal (<24h)";
-    // G2: Sem prazo cadastrado — campo obrigatório não preenchido
-    else if (!d.prazo) motivo = "Sem prazo cadastrado";
-    // G3: Resolvido dentro do prazo mas ainda não concluído — esquecimento de encerramento
-    else if (!d.concluido && d.resolvido && d.prazo && d.resolvido <= d.prazo)
-      motivo = "Resolvido no prazo, aguardando conclusão";
-
-    // G4: Chamado em aberto sem resolução — pode estar em andamento legitimamente
-    // NÃO aplicamos correção aqui — esses puxam o SLA para baixo corretamente
-    // exceto se confirmado manualmente como erro
-
-    d.noPrazoCor = motivo ? true : d.noPrazoBruto;
-    d.motivoCorrecao = motivo;
+    d.noPrazoBase = !!(d.dataEfetiva && d.prazo && d.dataEfetiva <= d.prazo);
+    d.noPrazoCor = d.noPrazoBase || prazoIrreal || semPrazo;
+    d.motivoCorrecao = prazoIrreal
+      ? "Prazo irreal (<24h)"
+      : semPrazo
+        ? "Sem prazo cadastrado"
+        : null;
   });
 
-  // ETAPA 4: Calcular métricas — MESMA base para todos os componentes
   const porAnoMes = (ano, mes) =>
     filtrado.filter(
       (d) => d.aberto.getFullYear() === ano && d.aberto.getMonth() + 1 === mes,
     );
-
   const slaMes = (ano, mes, campo) => {
     const s = porAnoMes(ano, mes);
     return s.length
       ? +((s.filter((d) => d[campo]).length / s.length) * 100).toFixed(1)
       : null;
   };
-
   const satMes = (ano, mes) => {
     const s = porAnoMes(ano, mes).filter((d) => d.satisfacao);
     return s.length
@@ -309,11 +341,10 @@ function processarChamados(chamados) {
       : null;
   };
 
-  // CATEGORIAS — mesma base filtrado
   const catMap = {};
   filtrado.forEach((d) => {
-    const cat = d.assunto.split(">")[0].trim() || "Outros";
-    const ano = d.aberto.getFullYear();
+    const cat = d.assunto.split(">")[0].trim() || "Outros",
+      ano = d.aberto.getFullYear();
     if (!catMap[cat]) catMap[cat] = { vBase: 0, vComp: 0 };
     if (ano === anoBase) catMap[cat].vBase++;
     if (ano === anoComp) catMap[cat].vComp++;
@@ -329,11 +360,10 @@ function processarChamados(chamados) {
     .sort((a, b) => b.v2025 - a.v2025)
     .slice(0, 8);
 
-  // ASSUNTOS — mesma base filtrado
   const assMap = {};
   filtrado.forEach((d) => {
-    const ass = d.assunto.replace(">", "›").trim() || "Outros";
-    const ano = d.aberto.getFullYear();
+    const ass = d.assunto.replace(">", "›").trim() || "Outros",
+      ano = d.aberto.getFullYear();
     if (!assMap[ass]) assMap[ass] = { v2025: 0, v2026: 0 };
     if (ano === anoBase) assMap[ass].v2025++;
     if (ano === anoComp) assMap[ass].v2026++;
@@ -348,7 +378,6 @@ function processarChamados(chamados) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
-  // RESPONSÁVEIS — mesma base filtrado, usa SLA corrigido
   const respMap = {};
   filtrado.forEach((d) => {
     const nome = d.responsavel || "Sem responsável";
@@ -369,7 +398,6 @@ function processarChamados(chamados) {
     .filter((r) => r.total >= 3)
     .sort((a, b) => b.total - a.total);
 
-  // KPIs GLOBAIS — mesma base filtrado
   const totalBase = filtrado.filter(
     (d) => d.aberto.getFullYear() === anoBase,
   ).length;
@@ -381,10 +409,6 @@ function processarChamados(chamados) {
     (filtrado.filter((d) => d.noPrazoCor).length / filtrado.length) *
     100
   ).toFixed(1);
-  const slaBruto = +(
-    (filtrado.filter((d) => d.noPrazoBruto).length / filtrado.length) *
-    100
-  ).toFixed(1);
   const tempos = filtrado
     .filter((d) => d.concluido && d.aberto)
     .map((d) => (d.concluido - d.aberto) / 3600000)
@@ -393,30 +417,29 @@ function processarChamados(chamados) {
     ? +tempos[Math.floor(tempos.length / 2)].toFixed(1)
     : 0;
 
-  // DIAGNÓSTICO — log no console para auditoria
+  const comSolucao = filtrado.filter((d) => d.dataEfetiva);
+  const emAberto = filtrado.filter((d) => !d.dataEfetiva);
   const corrigidos = filtrado.filter((d) => d.motivoCorrecao);
-  console.group(`📊 Diagnóstico SLA — ${anoBase} vs ${anoComp}`);
-  console.log(`Total recebido da API: ${chamados.length}`);
+  const slaBase = +(
+    (filtrado.filter((d) => d.noPrazoBase).length / filtrado.length) *
+    100
+  ).toFixed(1);
+  console.group(`📊 SLA — ${anoBase} vs ${anoComp}`);
   console.log(
-    `Após filtro de período: ${filtrado.length} (${totalBase} em ${anoBase}, ${totalComp} em ${anoComp})`,
+    `Total: ${filtrado.length} | Resolvidos/Concluídos: ${comSolucao.length} | Em aberto: ${emAberto.length}`,
   );
   console.log(
-    `Sem data de abertura (descartados): ${chamados.length - filtrado.length}`,
+    `SLA sem correções: ${slaBase}% | SLA com correções (prazo irreal/ausente): ${slaGlobal}%`,
   );
   console.log(
-    `─── SLA BRUTO: ${slaBruto}% (${filtrado.filter((d) => d.noPrazoBruto).length} de ${filtrado.length})`,
+    `Chamados corrigidos: ${corrigidos.length} (${((corrigidos.length / filtrado.length) * 100).toFixed(1)}%)`,
   );
-  console.log(`    Fórmula: concluído E concluído <= prazo`);
-  console.log(
-    `─── SLA CORRIGIDO: ${slaGlobal}% (${filtrado.filter((d) => d.noPrazoCor).length} de ${filtrado.length})`,
-  );
-  console.log(`    Correções aplicadas: ${corrigidos.length} chamados`);
   const motivos = {};
   corrigidos.forEach((d) => {
     motivos[d.motivoCorrecao] = (motivos[d.motivoCorrecao] || 0) + 1;
   });
   Object.entries(motivos).forEach(([m, n]) =>
-    console.log(`    - ${m}: ${n} chamados`),
+    console.log(`  - ${m}: ${n} chamados`),
   );
   console.groupEnd();
 
@@ -425,8 +448,6 @@ function processarChamados(chamados) {
     volume2026: mesesNum.map((m) => porAnoMes(anoComp, m).length),
     sla2025: mesesNum.map((m) => slaMes(anoBase, m, "noPrazoCor")),
     sla2026: mesesNum.map((m) => slaMes(anoComp, m, "noPrazoCor")),
-    slaBruto2025: mesesNum.map((m) => slaMes(anoBase, m, "noPrazoBruto")),
-    slaBruto2026: mesesNum.map((m) => slaMes(anoComp, m, "noPrazoBruto")),
     sat2025: mesesNum.map((m) => satMes(anoBase, m)),
     sat2026: mesesNum.map((m) => satMes(anoComp, m)),
     categorias: catArr.map((c) => c.nome),
@@ -440,18 +461,21 @@ function processarChamados(chamados) {
     total2025: totalBase,
     total2026: totalComp,
     slaGlobal,
-    slaBruto,
     tempoMediano,
     anoBase,
     anoComp,
   };
 }
 
-// ── PROCESSAMENTO PLANILHA EXCEL ──────────────────────────────────────────
 function processarPlanilha(workbook) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  console.group("📋 Diagnóstico da Planilha");
+  console.log(`Total de linhas lidas: ${rows.length}`);
+  if (rows.length) console.log("Colunas encontradas:", Object.keys(rows[0]));
+  console.groupEnd();
   if (!rows.length) return null;
+  const { anoBase, anoComp, mesInicio, mesFim } = getPeriodo();
   const dados = rows.map((r) => ({
     id: r["ID"] || r["id"] || "",
     aberto: parseDate(r["ABERTO"] || r["Aberto"] || r["aberto"]),
@@ -462,6 +486,7 @@ function processarPlanilha(workbook) {
     responsavel: String(
       r["RESPONSAVEL"] || r["RESPONSÁVEL"] || r["Responsavel"] || "",
     ),
+    departamento: String(r["DEPARTAMENTO"] || r["Departamento"] || ""),
     satisfacao:
       parseFloat(
         r["SATISFAÇÃO NOTA"] ||
@@ -471,12 +496,47 @@ function processarPlanilha(workbook) {
       ) || null,
     situacao: String(r["SITUAÇÃO"] || r["SITUACAO"] || r["Situação"] || ""),
   }));
+
+  // Diagnóstico: quantas linhas têm data de abertura válida
+  const semData = dados.filter((d) => !d.aberto).length;
+  console.log(
+    `⚠️ Linhas sem data de abertura válida (descartadas): ${semData}`,
+  );
+
+  // Diagnóstico: distribuição por ano/mês antes do filtro de período
+  const distribuicao = {};
+  dados.forEach((d) => {
+    if (!d.aberto) return;
+    const chave = `${d.aberto.getFullYear()}-${String(d.aberto.getMonth() + 1).padStart(2, "0")}`;
+    distribuicao[chave] = (distribuicao[chave] || 0) + 1;
+  });
+  console.log(
+    "📅 Distribuição por Ano-Mês (todos os dados da planilha):",
+    distribuicao,
+  );
+
   const filtrado = dados.filter((d) => {
     if (!d.aberto) return false;
     const ano = d.aberto.getFullYear(),
       mes = d.aberto.getMonth() + 1;
-    return (ano === 2025 || ano === 2026) && mes >= 1 && mes <= 5;
+    const noPeriodo =
+      (ano === anoBase || ano === anoComp) && mes >= mesInicio && mes <= mesFim;
+    // Se a coluna DEPARTAMENTO existir e não for TI, descarta (segurança extra)
+    const deptoOk =
+      !d.departamento || d.departamento.toLowerCase().includes("tecnologia");
+    return noPeriodo && deptoOk;
   });
+  const descartadosDepto = dados.filter(
+    (d) =>
+      d.departamento && !d.departamento.toLowerCase().includes("tecnologia"),
+  ).length;
+  if (descartadosDepto)
+    console.log(
+      `🚫 Linhas de outros departamentos descartadas: ${descartadosDepto}`,
+    );
+  console.log(
+    `✅ Linhas após filtro de período (${anoBase} e ${anoComp}, mês ${mesInicio}-${mesFim}): ${filtrado.length}`,
+  );
   if (!filtrado.length) return null;
   return processarChamados(
     filtrado.map((d) => ({
@@ -493,7 +553,7 @@ function processarPlanilha(workbook) {
   );
 }
 
-// ── GRÁFICOS ──────────────────────────────────────────────────────────────
+// ── GRÁFICOS ───────────────────────────────────────────────────────────────
 let charts = {};
 Chart.defaults.color = "#8a99ad";
 Chart.defaults.font.family = "'Source Sans 3', sans-serif";
@@ -528,35 +588,12 @@ const smartDatalabelPlugin = {
   },
 };
 
-const variacaoPlugin = {
-  id: "variacaoPlugin",
-  afterDatasetsDraw(chart) {
-    if (chart.canvas.id !== "chartCategoria") return;
-    const { ctx } = chart,
-      d = chart.data.datasets;
-    chart.getDatasetMeta(1).data.forEach((bar, i) => {
-      const v25 = d[0].data[i],
-        v26 = d[1].data[i];
-      if (!v25) return;
-      const diff = (((v26 - v25) / v25) * 100).toFixed(0),
-        label = (diff > 0 ? "+" : "") + diff + "%";
-      ctx.save();
-      ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-      ctx.fillStyle = diff > 0 ? "#c0392b" : "#1a7a5e";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, bar.x + 8, bar.y - 7);
-      ctx.restore();
-    });
-  },
-};
-
 function initCharts(d) {
   Object.values(charts).forEach((c) => c.destroy());
   charts = {};
-  const meses = getMesesLabels();
-  const anoBase = d.anoBase || 2025;
-  const anoComp = d.anoComp || 2024;
+  const meses = getMesesLabels(),
+    anoBase = d.anoBase || 2026,
+    anoComp = d.anoComp || 2025;
 
   charts.evolucao = new Chart(document.getElementById("chartEvolucao"), {
     type: "bar",
@@ -588,16 +625,17 @@ function initCharts(d) {
       },
     },
   });
+
   const cs = [
     ...d.categorias.map((n, i) => ({
       n,
       v25: d.cat2025[i],
       v26: d.cat2026[i],
     })),
-  ].sort((a, b) => b.v26 - a.v26);
+  ].sort((a, b) => b.v25 - a.v25);
   charts.categoria = new Chart(document.getElementById("chartCategoria"), {
     type: "bar",
-    plugins: [smartDatalabelPlugin, variacaoPlugin],
+    plugins: [smartDatalabelPlugin],
     data: {
       labels: cs.map((c) => c.n),
       datasets: [
@@ -618,7 +656,7 @@ function initCharts(d) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 24, right: 52 } },
+      layout: { padding: { top: 20, right: 40 } },
       plugins: {
         legend: {
           display: true,
@@ -632,11 +670,9 @@ function initCharts(d) {
       },
     },
   });
-  // Substituir null por undefined para o Chart.js não interpolar
+
   const slaBase = (d.sla2025 || []).map((v) => v ?? undefined);
   const slaComp = (d.sla2026 || []).map((v) => v ?? undefined);
-  const slaBBase = (d.slaBruto2025 || []).map((v) => v ?? undefined);
-  const slaBComp = (d.slaBruto2026 || []).map((v) => v ?? undefined);
 
   charts.sla = new Chart(document.getElementById("chartSLA"), {
     type: "line",
@@ -644,7 +680,7 @@ function initCharts(d) {
       labels: meses,
       datasets: [
         {
-          label: `SLA ${anoBase} corrigido`,
+          label: `SLA ${anoBase}`,
           data: slaBase,
           borderColor: "#7eaadf",
           backgroundColor: "transparent",
@@ -655,7 +691,7 @@ function initCharts(d) {
           spanGaps: false,
         },
         {
-          label: `SLA ${anoComp} corrigido`,
+          label: `SLA ${anoComp}`,
           data: slaComp,
           borderColor: "#52b899",
           backgroundColor: "transparent",
@@ -663,34 +699,6 @@ function initCharts(d) {
           tension: 0.2,
           pointRadius: 4,
           pointBackgroundColor: "#52b899",
-          spanGaps: false,
-        },
-        {
-          label: `SLA ${anoBase} bruto`,
-          data: slaBBase,
-          borderColor: "#7eaadf",
-          backgroundColor: "transparent",
-          borderWidth: 1.5,
-          borderDash: [5, 4],
-          tension: 0.2,
-          pointRadius: 3,
-          pointBackgroundColor: "#fff",
-          pointBorderColor: "#7eaadf",
-          pointBorderWidth: 2,
-          spanGaps: false,
-        },
-        {
-          label: `SLA ${anoComp} bruto`,
-          data: slaBComp,
-          borderColor: "#52b899",
-          backgroundColor: "transparent",
-          borderWidth: 1.5,
-          borderDash: [5, 4],
-          tension: 0.2,
-          pointRadius: 3,
-          pointBackgroundColor: "#fff",
-          pointBorderColor: "#52b899",
-          pointBorderWidth: 2,
           spanGaps: false,
         },
         {
@@ -710,15 +718,15 @@ function initCharts(d) {
       plugins: {
         legend: {
           position: "top",
-          labels: { boxWidth: 14, font: { size: 10 }, padding: 10 },
+          labels: { boxWidth: 14, font: { size: 11 }, padding: 12 },
         },
         tooltip: {
           callbacks: {
             label(ctx) {
               const v = ctx.parsed.y;
-              return v !== null && v !== undefined
+              return v != null
                 ? ` ${ctx.dataset.label}: ${v.toFixed(1)}%`
-                : ` ${ctx.dataset.label}: sem dados`;
+                : ` sem dados`;
             },
           },
         },
@@ -738,42 +746,25 @@ function initCharts(d) {
         id: "slaAnnotation",
         afterDatasetsDraw(chart) {
           const { ctx } = chart;
-          // Anotar todas as 4 linhas com seus valores
-          [0, 1, 2, 3].forEach((di) => {
-            const ds = chart.data.datasets[di];
-            const meta = chart.getDatasetMeta(di);
+          [0, 1].forEach((di) => {
+            const ds = chart.data.datasets[di],
+              meta = chart.getDatasetMeta(di);
             if (meta.hidden) return;
-            const isBruto = di >= 2;
-
             meta.data.forEach((point, i) => {
               const v = ds.data[i];
-              if (v === null || v === undefined) return;
-              const label = v.toFixed(1) + "%";
-
-              // Bruto fica abaixo do ponto, corrigido fica acima
-              const above = !isBruto;
-              const yPos = above ? point.y - 16 : point.y + 16;
-
+              if (v == null || v === undefined) return;
+              const label = v.toFixed(1) + "%",
+                yPos = point.y - 18;
               ctx.save();
-              const tw = ctx.measureText(label).width + 10;
-              const th = 13;
-
-              // Fundo da pill
-              if (isBruto) {
-                ctx.fillStyle =
-                  di === 2 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
-              } else {
-                ctx.fillStyle =
-                  di === 0 ? "rgba(126,170,223,0.12)" : "rgba(82,184,153,0.12)";
-              }
+              const tw = ctx.measureText(label).width + 10,
+                th = 14;
+              ctx.fillStyle =
+                di === 0 ? "rgba(126,170,223,0.15)" : "rgba(82,184,153,0.15)";
               ctx.beginPath();
-              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 3);
+              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
               ctx.fill();
-
-              // Texto
-              ctx.font = `${isBruto ? "500" : "bold"} 9px "Aptos Narrow", sans-serif`;
+              ctx.font = 'bold 10px "Aptos Narrow",sans-serif';
               ctx.fillStyle = ds.borderColor;
-              ctx.globalAlpha = isBruto ? 0.75 : 1;
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
               ctx.fillText(label, point.x, yPos);
@@ -784,6 +775,7 @@ function initCharts(d) {
       },
     ],
   });
+
   charts.sat = new Chart(document.getElementById("chartSat"), {
     type: "line",
     data: {
@@ -816,7 +808,8 @@ function initCharts(d) {
         legend: { position: "top" },
         tooltip: {
           callbacks: {
-            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}`,
+            label: (ctx) =>
+              ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2) || "—"}`,
           },
         },
       },
@@ -838,32 +831,34 @@ function initCharts(d) {
             ds0 = chart.data.datasets[0],
             ds1 = chart.data.datasets[1],
             meta0 = chart.getDatasetMeta(0),
-            meta1 = chart.getDatasetMeta(1),
-            drawLabel = (point, v, color, above) => {
-              ctx.save();
-              ctx.font = 'bold 10px "Source Sans 3", sans-serif';
-              ctx.textAlign = "center";
-              ctx.textBaseline = above ? "bottom" : "top";
-              ctx.fillStyle = color;
-              ctx.fillText(
-                v.toFixed(2),
-                point.x,
-                above ? point.y - 6 : point.y + 6,
-              );
-              ctx.restore();
-            };
-          for (let i = 0; i < ds0.data.length; i++) {
+            meta1 = chart.getDatasetMeta(1);
+          const draw = (point, v, color, above) => {
+            if (v == null) return;
+            ctx.save();
+            ctx.font = 'bold 10px "Source Sans 3", sans-serif';
+            ctx.textAlign = "center";
+            ctx.textBaseline = above ? "bottom" : "top";
+            ctx.fillStyle = color;
+            ctx.fillText(
+              v.toFixed(2),
+              point.x,
+              above ? point.y - 6 : point.y + 6,
+            );
+            ctx.restore();
+          };
+          for (let i = 0; i < (ds0.data || []).length; i++) {
             const v0 = ds0.data[i],
-              v1 = ds1.data[i];
+              v1 = ds1?.data[i];
             if (!meta0.hidden)
-              drawLabel(meta0.data[i], v0, ds0.borderColor, v0 >= v1);
-            if (!meta1.hidden)
-              drawLabel(meta1.data[i], v1, ds1.borderColor, v1 > v0);
+              draw(meta0.data[i], v0, ds0.borderColor, v0 >= v1);
+            if (meta1 && !meta1.hidden)
+              draw(meta1.data[i], v1, ds1.borderColor, v1 > v0);
           }
         },
       },
     ],
   });
+
   const at = [...d.assuntosRaw]
     .sort((a, b) => b.v2025 + b.v2026 - (a.v2025 + a.v2026))
     .slice(0, 10);
@@ -899,7 +894,7 @@ function initCharts(d) {
               const i = ctx[0].dataIndex,
                 v25 = at[i].v2025,
                 v26 = at[i].v2026,
-                diff = (((v26 - v25) / v25) * 100).toFixed(1);
+                diff = v26 > 0 ? (((v25 - v26) / v26) * 100).toFixed(1) : "—";
               return `Variação: ${diff > 0 ? "+" : ""}${diff}%`;
             },
           },
@@ -936,95 +931,70 @@ function renderTabela(responsaveis) {
 
 function atualizarKPIs(d) {
   const { anoBase, anoComp } = getPeriodo();
-  const t2025 = d.total2025 || d.volume2025.reduce((a, b) => a + b, 0),
-    t2026 = d.total2026 || d.volume2026.reduce((a, b) => a + b, 0),
+  const t2025 = d.total2025 || 0,
+    t2026 = d.total2026 || 0,
     total = d.totalGeral || t2025 + t2026;
+
   document.querySelector(".kpi-card.blue .kpi-value").textContent =
     total.toLocaleString("pt-BR");
   document.querySelector(".kpi-card.blue .kpi-sub").innerHTML =
     `<strong>${t2025.toLocaleString("pt-BR")}</strong> em ${d.anoBase || anoBase} · <strong>${t2026.toLocaleString("pt-BR")}</strong> em ${d.anoComp || anoComp}`;
-  const satMedia =
-    d.sat2025 && d.sat2025.filter((v) => v > 0).length
-      ? (
-          [...d.sat2025, ...d.sat2026]
-            .filter((v) => v > 0)
-            .reduce((a, b) => a + b, 0) /
-          [...d.sat2025, ...d.sat2026].filter((v) => v > 0).length
-        )
-          .toFixed(2)
-          .replace(".", ",")
-      : "4,87";
+
+  const allSat = [...(d.sat2025 || []), ...(d.sat2026 || [])].filter(
+    (v) => v && v > 0,
+  );
+  const satMedia = allSat.length
+    ? (allSat.reduce((a, b) => a + b, 0) / allSat.length)
+        .toFixed(2)
+        .replace(".", ",")
+    : "4,87";
   document.querySelector(".kpi-card.blue2 .kpi-value").textContent = satMedia;
   document.querySelector(".kpi-card.blue2 .kpi-sub").textContent =
-    `${d.avaliados || 344} de ${d.totalFiltro || 515} avaliados (${d.totalFiltro ? ((d.avaliados / d.totalFiltro) * 100).toFixed(1) : 66.8}%)`;
+    `${d.avaliados || 0} avaliados (${d.totalFiltro ? ((d.avaliados / d.totalFiltro) * 100).toFixed(1) : 0}%)`;
+
   document.querySelector(".kpi-value-sla").textContent =
-    (d.slaGlobal || 93.0).toFixed(1) + "%";
-  const brutoEl = document.getElementById("kpiSlaBruto");
-  if (brutoEl && d.slaBruto !== undefined) {
-    brutoEl.textContent = `SLA bruto: ${d.slaBruto.toFixed(1)}%`;
-    brutoEl.style.color =
-      d.slaBruto >= 90
-        ? "var(--accent4)"
-        : d.slaBruto >= 60
-          ? "var(--accent5)"
-          : "var(--accent3)";
-  }
+    (d.slaGlobal || 0).toFixed(1) + "%";
+
   document.querySelector(".kpi-card.green:last-child .kpi-value").textContent =
-    (d.tempoMediano || 40.5) + "h";
+    (d.tempoMediano || 0) + "h";
   document.getElementById("filterBadge").textContent =
-    `Filtro Amostral: ${total.toLocaleString("pt-BR")} Chamados · Depto TI`;
+    `${total.toLocaleString("pt-BR")} chamados · Depto TI`;
 }
 
 function calcularInsights(d) {
-  const { anoBase, anoComp, mesInicio, mesFim } = getPeriodo();
+  const { anoBase, anoComp } = getPeriodo();
   const meses = getMesesLabels();
-  const tBase = d.volume2025.reduce((a, b) => a + b, 0);
-  const tComp = d.volume2026.reduce((a, b) => a + b, 0);
+  const tBase = d.volume2025.reduce((a, b) => a + b, 0),
+    tComp = d.volume2026.reduce((a, b) => a + b, 0);
   const varPct = tComp > 0 ? (((tBase - tComp) / tComp) * 100).toFixed(1) : 0;
   const sinal =
     tBase > tComp ? "crescimento" : tBase < tComp ? "recuo" : "estabilidade";
-
-  // Mês com maior queda e maior pico no ano base vs comparativo
-  const diferencas = d.volume2025.map((v, i) => ({
-    mes: meses[i],
-    diff: v - (d.volume2026[i] || 0),
-    vBase: v,
-    vComp: d.volume2026[i] || 0,
-  }));
-  const maiorQueda = [...diferencas].sort((a, b) => b.diff - a.diff)[0];
-  const maiorPico = [...diferencas].sort((a, b) => a.diff - b.diff)[0];
-
-  // Assunto com maior volume no ano base
   const assTop = [...d.assuntosRaw].sort((a, b) => b.v2025 - a.v2025)[0];
-  const varCritico =
-    assTop && assTop.v2026 > 0
-      ? (((assTop.v2025 - assTop.v2026) / assTop.v2026) * 100).toFixed(0)
-      : "—";
-  const sinalCritico =
-    assTop && assTop.v2025 > assTop.v2026 ? "crescimento" : "redução";
-
-  // SLA status
   const slaStatus =
     (d.slaGlobal || 0) >= 90
-      ? `<strong style="color:#1a7a5e;">acima da meta de 90%</strong>`
-      : `<strong style="color:#c0392b;">abaixo da meta de 90%</strong>`;
-
+      ? `<strong style="color:#1a7a5e">acima da meta de 90%</strong>`
+      : `<strong style="color:#c0392b">abaixo da meta de 90%</strong>`;
   const c = document.getElementById("insightTextoDashboard");
   if (c)
-    c.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div>🔹 <strong>Tendência de Escopo:</strong> No período <strong>${meses[0]}–${meses[meses.length - 1]} ${anoBase}</strong>, a equipe de TI processou <strong>${tBase.toLocaleString("pt-BR")} chamados</strong> vs <strong>${tComp.toLocaleString("pt-BR")}</strong> no mesmo período de ${anoComp} — um <strong>${sinal} de ${Math.abs(varPct)}%</strong>.</div>
-      ${assTop ? `<div>🔹 <strong>Ponto Crítico Ativo:</strong> O assunto <strong style="color:var(--accent);">"${assTop.label}"</strong> foi o mais recorrente em ${anoBase} com <strong>${assTop.v2025} chamados</strong> (${anoComp}: ${assTop.v2026}) — variação de ${sinalCritico === "crescimento" ? "+" : "-"}${Math.abs(varCritico)}%.</div>` : ""}
-      <div>🔹 <strong>SLA do Período:</strong> O índice de cumprimento de prazo em ${anoBase} é de <strong style="color:${(d.slaGlobal || 0) >= 90 ? "#1a7a5e" : "#c0392b"};font-weight:bold;">${(d.slaGlobal || 0).toFixed(1)}%</strong> — ${slaStatus}.</div>
-    </div>`;
-
-  // Gargalos laterais dinâmicos
+    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;">
+    <div>🔹 <strong>Tendência:</strong> Em ${meses[0]}–${meses[meses.length - 1]} ${anoBase}, a TI processou <strong>${tBase.toLocaleString("pt-BR")} chamados</strong>${tComp ? " vs " + tComp.toLocaleString("pt-BR") + " em " + anoComp + " — " + sinal + " de " + Math.abs(varPct) + "%" : ""}.
+    </div>
+    ${assTop && assTop.v2025 > 0 ? `<div>🔹 <strong>Destaque:</strong> <strong style="color:var(--accent)">"${assTop.label}"</strong> liderou com <strong>${assTop.v2025} chamados</strong> em ${anoBase}.</div>` : ""}
+    <div>🔹 <strong>SLA:</strong> <strong style="color:${(d.slaGlobal || 0) >= 90 ? "#1a7a5e" : "#c0392b"};font-weight:bold">${(d.slaGlobal || 0).toFixed(1)}%</strong> — ${slaStatus}. Considerando chamados Resolvidos e Concluídos como equivalentes.</div>
+  </div>`;
+  const difs = d.volume2025.map((v, i) => ({
+    mes: meses[i],
+    vBase: v,
+    vComp: d.volume2026[i] || 0,
+    diff: v - (d.volume2026[i] || 0),
+  }));
+  const maiorVol = [...difs].sort((a, b) => b.vBase - a.vBase)[0];
   const l = document.getElementById("insightLateralOperacional");
   if (l)
     l.innerHTML = `
-    <p><strong style="color:#1c2133">Variação Mensal:</strong> Em ${anoBase}, <strong>${maiorQueda.mes}</strong> registrou o maior volume (${maiorQueda.vBase} chamados vs ${maiorQueda.vComp} em ${anoComp}).</p>
-    <p><strong style="color:#1c2133">Ponto de Atenção:</strong> <strong>${maiorPico.mes}</strong> foi o mês com maior crescimento em ${anoComp} em relação a ${anoBase} (${maiorPico.vComp} vs ${maiorPico.vBase}).</p>
-    ${assTop ? `<p><strong style="color:#1c2133">Foco Central:</strong> <strong>${assTop.label}</strong> lidera os gargalos com ${assTop.v2025} chamados em ${anoBase}.</p>` : ""}`;
+    <p><strong style="color:#1c2133">Maior volume:</strong> <strong>${maiorVol?.mes}</strong> — ${maiorVol?.vBase} chamados em ${anoBase}.</p>
+    ${assTop && assTop.v2025 > 0 ? `<p><strong style="color:#1c2133">Foco principal:</strong> <strong>${assTop.label}</strong> com ${assTop.v2025} ocorrências.</p>` : ""}
+    <p><strong style="color:#1c2133">SLA (Resolvidos + Concluídos):</strong> ${(d.slaGlobal || 0).toFixed(1)}%</p>`;
 }
 
 function renderDashboard(d) {
@@ -1034,24 +1004,21 @@ function renderDashboard(d) {
   calcularInsights(d);
 }
 
-// ── PAINEL DE CHAMADOS PENDENTES ──────────────────────────────────────────
+// ── PAINEL PENDENTES ──────────────────────────────────────────────────────
 async function abrirPainelPendentes() {
-  const painel = document.getElementById("painelPendentes");
-  const tbody = document.getElementById("pendentesBody");
-  const status = document.getElementById("statusPendentes");
-
+  const painel = document.getElementById("painelPendentes"),
+    tbody = document.getElementById("pendentesBody"),
+    status = document.getElementById("statusPendentes");
   painel.style.display = "block";
   painel.scrollIntoView({ behavior: "smooth", block: "start" });
   tbody.innerHTML = `<tr><td colspan="6" class="painel-loading">Buscando chamados resolvidos pendentes...</td></tr>`;
   status.textContent = "";
-
   try {
     const chamados = await buscarChamadosPendentes();
     if (!chamados.length) {
       tbody.innerHTML = `<tr><td colspan="6" class="painel-empty">Nenhum chamado pendente de conclusão</td></tr>`;
       return;
     }
-
     tbody.innerHTML = "";
     chamados.forEach((c, idx) => {
       const resolvido = c.resolvido
@@ -1061,31 +1028,15 @@ async function abrirPainelPendentes() {
         c.resolvido &&
         c.resolverEstipulado &&
         new Date(c.resolvido) <= new Date(c.resolverEstipulado);
-      const badgeCls = noPrazo ? "badge-prazo" : "badge-atraso";
-      const badgeTxt = noPrazo ? "✓ No prazo" : "⚠ Atrasado";
       const rowCls = idx % 2 === 0 ? "painel-row" : "painel-row painel-row-alt";
-
       tbody.insertAdjacentHTML(
         "beforeend",
-        `
-        <tr id="row-${c.id}" class="${rowCls}">
-          <td class="painel-cell-id">#${c.id}</td>
-          <td class="painel-cell-assunto">${c.assunto?.nome || "—"}</td>
-          <td class="painel-cell-resp">${c.responsavel?.nome || "—"}</td>
-          <td class="painel-cell-data">${resolvido}</td>
-          <td><span class="painel-badge ${badgeCls}">${badgeTxt}</span></td>
-          <td>
-            <button class="btn-concluir" onclick="concluirChamadoUI(${c.id})">
-              ✓ Concluir
-            </button>
-          </td>
-        </tr>`,
+        `<tr id="row-${c.id}" class="${rowCls}"><td class="painel-cell-id">#${c.id}</td><td class="painel-cell-assunto">${c.assunto?.nome || "—"}</td><td class="painel-cell-resp">${c.responsavel?.nome || "—"}</td><td class="painel-cell-data">${resolvido}</td><td><span class="painel-badge ${noPrazo ? "badge-prazo" : "badge-atraso"}">${noPrazo ? "✓ No prazo" : "⚠ Atrasado"}</span></td><td><button class="btn-concluir" onclick="concluirChamadoUI(${c.id})">✓ Concluir</button></td></tr>`,
       );
     });
-
-    status.textContent = `${chamados.length} chamados pendentes`;
+    status.textContent = `${chamados.length} pendentes`;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="painel-loading" style="color:#f8a;">Erro ao carregar: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="painel-loading" style="color:var(--accent3)">Erro: ${err.message}</td></tr>`;
   }
 }
 
@@ -1103,16 +1054,14 @@ window.concluirChamadoUI = async function (id) {
       row.style.textDecoration = "line-through";
       row.querySelector(".btn-concluir").textContent = "Concluído";
     }
-    const status = document.getElementById("statusPendentes");
-    if (status) {
-      status.textContent = `Chamado #${id} concluído`;
-    }
+    const s = document.getElementById("statusPendentes");
+    if (s) s.textContent = `Chamado #${id} concluído`;
   } catch (err) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = "✓ Concluir";
     }
-    alert(`Erro ao concluir chamado #${id}: ${err.message}`);
+    alert(`Erro ao concluir #${id}: ${err.message}`);
   }
 };
 
@@ -1136,7 +1085,7 @@ function configurarImportacao() {
         });
         const dados = processarPlanilha(wb);
         if (!dados) {
-          status.textContent = "❌ Planilha inválida ou sem dados Jan-Mai.";
+          status.textContent = "❌ Planilha inválida ou sem dados no período.";
           status.style.color = "var(--accent3)";
           return;
         }
@@ -1155,6 +1104,40 @@ function configurarImportacao() {
   });
 }
 
+// ── ATUALIZAR DO GOOGLE SHEETS ─────────────────────────────────────────────
+function configurarGoogleSheets() {
+  const btn = document.getElementById("btnSharePoint");
+  const status = document.getElementById("statusImport"),
+    nome = document.getElementById("nomeArquivo");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.textContent = "⏳ Buscando...";
+    status.textContent = "Conectando ao Google Sheets...";
+    status.style.color = "var(--muted)";
+    try {
+      const dados = await buscarPlanilhaGoogleSheets();
+      if (!dados) {
+        status.textContent = "❌ Planilha sem dados no período selecionado.";
+        status.style.color = "var(--accent3)";
+        return;
+      }
+      dadosAtivos = dados;
+      renderDashboard(dados);
+      const agora = new Date().toLocaleString("pt-BR");
+      status.textContent = `✅ ${dados.totalFiltro} chamados · Atualizado em ${agora}`;
+      status.style.color = "var(--accent4)";
+      nome.textContent = `Google Sheets · ${agora}`;
+    } catch (err) {
+      status.textContent = `❌ Erro: ${err.message}`;
+      status.style.color = "var(--accent3)";
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Atualizar da Planilha`;
+    }
+  });
+}
+
 // ── BUSCA SULTS ───────────────────────────────────────────────────────────
 function configurarBuscaSults() {
   const btn = document.getElementById("btnBuscarSults"),
@@ -1163,38 +1146,47 @@ function configurarBuscaSults() {
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     btn.textContent = "⏳ Buscando...";
-    status.textContent = "Conectando ao Sults (Depto TI)...";
+    status.textContent = "Conectando ao Sults...";
     status.style.color = "var(--muted)";
     try {
-      const chamados = await buscarTodosChamados((carregados, total, qtd) => {
-        status.textContent = `Carregando — ${qtd} chamados recebidos...`;
+      const chamados = await buscarTodosChamados((c, t, q) => {
+        status.textContent = `⏳ Carregando — ${q} chamados...`;
       });
       const dados = processarChamados(chamados);
       if (!dados) {
-        status.textContent = "❌ Nenhum chamado TI encontrado no período.";
+        status.textContent = "❌ Nenhum chamado encontrado no período.";
         status.style.color = "var(--accent3)";
         return;
       }
       dadosAtivos = dados;
       renderDashboard(dados);
       const agora = new Date().toLocaleString("pt-BR");
-      status.textContent = `✅ ${dados.totalFiltro} chamados TI · Atualizado em ${agora}`;
+      status.textContent = `✅ ${dados.totalFiltro} chamados · Atualizado em ${agora}`;
       status.style.color = "var(--accent4)";
-      nome.textContent = `API Sults · Depto TI · ${agora}`;
+      nome.textContent = `API Sults · ${agora}`;
     } catch (err) {
       status.textContent = `❌ Erro: ${err.message}`;
       status.style.color = "var(--accent3)";
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Buscar dados do Sults`;
+      btn.textContent = "Buscar dados do Sults";
     }
   });
 }
 
 // ── INICIALIZAÇÃO ─────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
+  // Força valores padrão corretos — sobrescreve cache do navegador
+  const anoBaseEl = document.getElementById("anoBase");
+  const mesInicioEl = document.getElementById("mesInicio");
+  const mesFimEl = document.getElementById("mesFim");
+  if (anoBaseEl) anoBaseEl.value = "2026";
+  if (mesInicioEl) mesInicioEl.value = "1";
+  if (mesFimEl) mesFimEl.value = "6";
+
   configurarImportacao();
   configurarBuscaSults();
+  configurarGoogleSheets();
   document
     .getElementById("btnPendentes")
     .addEventListener("click", abrirPainelPendentes);
@@ -1202,15 +1194,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("painelPendentes").style.display = "none";
   });
 
-  // Atualiza resumo ao mudar qualquer select de período
   ["anoBase", "mesInicio", "mesFim"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", () => {
       atualizarResumo();
-      // Se havia dados carregados, avisa que precisa buscar novamente
       const status = document.getElementById("statusImport");
       if (dadosAtivos) {
         status.textContent =
-          "⚠️ Período alterado — clique em 'Buscar dados do Sults' para atualizar.";
+          "⚠️ Período alterado — clique em 'Atualizar do SharePoint' ou 'Buscar dados do Sults' para atualizar.";
         status.style.color = "var(--accent5)";
       }
     });
