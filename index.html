@@ -5,45 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard de Chamados — TI | Fast Sistemas Construtivos</title>
     <link rel="icon" type="image/png" href="src/img/favicon.png" />
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#fdf2f2",
+                100: "#fde8e8",
+                600: "#c41e23",
+                700: "#a61c24",
+                800: "#8f171e",
+              },
+            },
+            fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+
+    <!-- Chart.js + XLSX (mesmos usados pelo script.js original) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="style.css" />
+
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <!--
+      Bloco de estilo mínimo (não é um arquivo CSS separado).
+      Necessário só porque o script.js já usa var(--accent), var(--accent3) etc.
+      diretamente em innerHTML (Análise Dinâmica, Gargalos) — as variáveis
+      precisam existir para essas cores continuarem funcionando.
+      Também define o visual "mini-card" dos insights, que o Tailwind puro
+      não alcança porque o conteúdo é gerado dinamicamente pelo JS.
+    -->
+    <style>
+      :root {
+        --accent: #a61c24;
+        --accent2: #8f171e;
+        --accent3: #dc2626;
+        --accent4: #16a34a;
+        --accent5: #d97706;
+        --muted: #64748b;
+        --text2: #334155;
+      }
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: #d1d5db transparent;
+      }
+      ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 99px;
+      }
+
+      /* Análise Dinâmica — grid dos cards de alerta (o card em si já vem
+         estilizado via Tailwind direto no HTML gerado pelo script.js) */
+      .insight-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      @media (max-width: 900px) {
+        .insight-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Gargalos do Período — mesmo tratamento de mini-card */
+      .gargalos-text {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .gargalos-text p {
+        background: #ffffff;
+        border: 1px solid #f1f5f9;
+        border-left: 3px solid var(--accent3);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+        line-height: 1.6;
+        margin: 0;
+      }
+    </style>
   </head>
-  <body>
-    <div class="container">
-      <!-- HEADER -->
-      <header>
-        <div class="header-left">
+
+  <body
+    class="bg-slate-50 text-slate-900 antialiased"
+    style="font-family: &quot;Inter&quot;, system-ui, sans-serif"
+  >
+    <div class="max-w-[1500px] mx-auto px-6 py-7">
+      <!-- ══════════════ HEADER ══════════════ -->
+      <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
           <img
             src="src/img/logo.png"
             alt="Fast Sistemas Construtivos"
-            class="header-logo"
+            class="h-9 w-auto object-contain"
           />
-          <div class="header-titles">
-            <h1>Dashboard de Chamados — TI</h1>
-            <p class="subtitle" id="subtitlePeriodo">
+          <div>
+            <h1
+              class="text-xl font-semibold tracking-tight text-slate-900 leading-tight"
+            >
+              Dashboard de Chamados — TI
+            </h1>
+            <p class="text-xs text-slate-500 mt-0.5" id="subtitlePeriodo">
               Análise Comparativa de Desempenho
             </p>
           </div>
         </div>
-        <div class="header-right">
-          <span class="badge">Fonte: Sults</span>
-          <span class="badge active" id="filterBadge"
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <span
+            class="text-[11px] font-medium text-slate-600 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm"
+          >
+            Fonte: Sults
+          </span>
+          <span
+            id="filterBadge"
+            class="text-[11px] font-semibold text-brand-700 bg-brand-50 rounded-full px-3 py-1.5"
             >Filtro Amostral: Depto TI</span
           >
         </div>
       </header>
 
-      <!-- SELETOR DE PERÍODO -->
-      <div class="periodo-bar">
-        <div class="periodo-label-wrap">
+      <!-- ══════════════ TOOLBAR — período + ações (pílulas) ══════════════ -->
+      <div
+        class="flex flex-wrap items-center gap-3 mb-2 bg-white border border-gray-100 rounded-2xl shadow-sm px-5 py-3.5"
+      >
+        <div class="flex items-center gap-1.5 text-brand-700 mr-1">
           <svg
-            width="16"
-            height="16"
+            width="14"
+            height="14"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -54,357 +156,403 @@
             <line x1="8" y1="2" x2="8" y2="6" />
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
-          <span class="periodo-label">Período de análise</span>
-        </div>
-        <div class="periodo-campos">
-          <div class="periodo-grupo">
-            <label class="periodo-field-label">Ano base</label>
-            <select id="anoBase" class="periodo-select" autocomplete="off">
-              <option value="2026">2026</option>
-              <option value="2025">2025</option>
-            </select>
-          </div>
-          <div class="periodo-grupo">
-            <label class="periodo-field-label">Mês início</label>
-            <select id="mesInicio" class="periodo-select" autocomplete="off">
-              <option value="1">Janeiro</option>
-              <option value="2">Fevereiro</option>
-              <option value="3">Março</option>
-              <option value="4">Abril</option>
-              <option value="5">Maio</option>
-              <option value="6">Junho</option>
-              <!-- <option value="7">Julho</option>
-              <option value="8">Agosto</option>
-              <option value="9">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option> -->
-            </select>
-          </div>
-          <div class="periodo-grupo">
-            <label class="periodo-field-label">Mês fim</label>
-            <select id="mesFim" class="periodo-select" autocomplete="off">
-              <option value="1">Janeiro</option>
-              <option value="2">Fevereiro</option>
-              <option value="3">Março</option>
-              <option value="4">Abril</option>
-              <option value="5">Maio</option>
-              <option value="6">Junho</option>
-              <!-- <option value="7">Julho</option>
-              <option value="8">Agosto</option>
-              <option value="9">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option> -->
-            </select>
-          </div>
-          <div class="periodo-vs-wrap">
-            <span class="periodo-vs-text">vs ano anterior</span>
-            <span id="periodoResumo" class="periodo-resumo"
-              >Jan–Jun 2026 vs 2025</span
-            >
-          </div>
-        </div>
-      </div>
-
-      <!-- BARRA DE AÇÕES -->
-      <div class="import-bar">
-        <div class="import-left">
-          <button id="btnSharePoint" class="import-btn primary-btn">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="3" y1="9" x2="21" y2="9" />
-              <line x1="3" y1="15" x2="21" y2="15" />
-              <line x1="9" y1="3" x2="9" y2="21" />
-              <line x1="15" y1="3" x2="15" y2="21" />
-            </svg>
-            Atualizar da Planilha
-          </button>
-          <button id="btnImportar" class="import-btn secondary-btn">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            Importar Planilha (.xlsx)
-          </button>
-          <input
-            type="file"
-            id="inputExcel"
-            accept=".xlsx,.xls"
-            style="display: none"
-          />
-          <span id="nomeArquivo" class="import-filename"
-            >Exibindo dados padrão</span
+          <span
+            class="text-[10px] font-bold uppercase tracking-wider text-slate-700"
+            >Período</span
           >
         </div>
-        <span id="statusImport" class="import-status"></span>
+
+        <select
+          id="anoBase"
+          class="text-sm text-slate-700 bg-white border border-gray-200 rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-300"
+          autocomplete="off"
+        >
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+        </select>
+        <select
+          id="mesInicio"
+          class="text-sm text-slate-700 bg-white border border-gray-200 rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-300"
+          autocomplete="off"
+        >
+          <option value="1">Janeiro</option>
+          <option value="2">Fevereiro</option>
+          <option value="3">Março</option>
+          <option value="4">Abril</option>
+          <option value="5">Maio</option>
+          <option value="6">Junho</option>
+        </select>
+        <span class="text-slate-300 text-sm">—</span>
+        <select
+          id="mesFim"
+          class="text-sm text-slate-700 bg-white border border-gray-200 rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-300"
+          autocomplete="off"
+        >
+          <option value="1">Janeiro</option>
+          <option value="2">Fevereiro</option>
+          <option value="3">Março</option>
+          <option value="4">Abril</option>
+          <option value="5">Maio</option>
+          <option value="6">Junho</option>
+        </select>
+
+        <span
+          id="periodoResumo"
+          class="text-xs font-semibold text-white bg-brand-700 rounded-full px-3.5 py-1.5 ml-1"
+        >
+          Jan–Jun 2026 vs 2025
+        </span>
+
+        <div class="w-px self-stretch bg-gray-100 mx-1"></div>
+
+        <button
+          id="btnSharePoint"
+          class="inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white text-sm font-medium px-4 py-2 rounded-full shadow-sm transition-colors active:scale-95"
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="3" y1="15" x2="21" y2="15" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+            <line x1="15" y1="3" x2="15" y2="21" />
+          </svg>
+          Atualizar
+        </button>
+        <button
+          id="btnImportar"
+          class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 border border-gray-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-full transition-colors active:scale-95"
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          Importar (.xlsx)
+        </button>
+        <input
+          type="file"
+          id="inputExcel"
+          accept=".xlsx,.xls"
+          style="display: none"
+        />
+      </div>
+      <div
+        class="flex items-center justify-between text-xs text-slate-400 px-2 py-2 mb-6"
+      >
+        <span id="nomeArquivo" class="italic">Exibindo dados padrão</span>
+        <span id="statusImport" class="font-medium"></span>
       </div>
 
-      <!-- KPIs -->
-      <div class="kpi-grid">
-        <div class="kpi-card blue">
-          <div class="kpi-icon">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+      <!-- ══════════════ KPIs ══════════════ -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        <div
+          class="kpi-card blue bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span
+              class="kpi-icon w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center"
             >
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </span>
           </div>
           <div class="kpi-body">
-            <div class="kpi-label">Volume Total do Período</div>
-            <div class="kpi-value">—</div>
-            <div class="kpi-sub" id="kpiVolumeSub">Aguardando dados</div>
+            <div class="kpi-label text-xs text-slate-500 mb-1">
+              Volume Total do Período
+            </div>
+            <div class="kpi-value text-2xl font-bold text-slate-900">—</div>
+            <div class="kpi-sub text-xs text-slate-400 mt-1" id="kpiVolumeSub">
+              Aguardando dados
+            </div>
           </div>
         </div>
-        <div class="kpi-card blue2">
-          <div class="kpi-icon">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+
+        <div
+          class="kpi-card blue2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span
+              class="kpi-icon w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center"
             >
-              <polygon
-                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-              />
-            </svg>
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                />
+              </svg>
+            </span>
           </div>
           <div class="kpi-body">
-            <div class="kpi-label">Satisfação Média</div>
-            <div class="kpi-value">4,87</div>
-            <div class="kpi-sub">344 de 515 avaliados (66,8%)</div>
+            <div class="kpi-label text-xs text-slate-500 mb-1">
+              Satisfação Média
+            </div>
+            <div class="kpi-value text-2xl font-bold text-slate-900">4,87</div>
+            <div class="kpi-sub text-xs text-slate-400 mt-1">
+              344 de 515 avaliados (66,8%)
+            </div>
           </div>
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-icon">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+
+        <div
+          class="kpi-card green bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span
+              class="kpi-icon w-10 h-10 rounded-xl bg-red-50 text-brand-700 flex items-center justify-center"
             >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
           </div>
           <div class="kpi-body">
-            <div class="kpi-label">SLA Global do Período</div>
-            <div class="kpi-value kpi-value-sla">93,0%</div>
-            <div class="kpi-sub">Resolvidos + Concluídos dentro do prazo</div>
+            <div class="kpi-label text-xs text-slate-500 mb-1">
+              SLA Global do Período
+            </div>
+            <div
+              class="kpi-value kpi-value-sla text-2xl font-bold text-brand-700"
+            >
+              93,0%
+            </div>
+            <div class="kpi-sub text-xs text-slate-400 mt-1">
+              Resolvidos + Concluídos dentro do prazo
+            </div>
           </div>
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-icon">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+
+        <div
+          class="kpi-card green bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span
+              class="kpi-icon w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center"
             >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </span>
           </div>
           <div class="kpi-body">
-            <div class="kpi-label">Tempo Mediano Resolução</div>
-            <div class="kpi-value">40,5h</div>
-            <div class="kpi-sub">Média móvel de atendimento</div>
+            <div class="kpi-label text-xs text-slate-500 mb-1">
+              Tempo Mediano Resolução
+            </div>
+            <div class="kpi-value text-2xl font-bold text-slate-900">40,5h</div>
+            <div class="kpi-sub text-xs text-slate-400 mt-1">
+              Média móvel de atendimento
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- ANÁLISE DINÂMICA -->
-      <div class="chart-card full insight-card">
-        <h3>Análise Dinâmica</h3>
-        <p class="chart-sub">
+      <!-- ══════════════ ANÁLISE DINÂMICA (mini-cards, dados intactos) ══════════════ -->
+      <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6"
+      >
+        <h3 class="text-sm font-semibold text-slate-800">Análise Dinâmica</h3>
+        <p class="text-xs text-slate-500 mt-0.5 mb-4">
           Leitura gerada a partir das variações calculadas entre os períodos
         </p>
-        <div class="chart-divider"></div>
-        <div id="insightTextoDashboard" class="insight-text">Carregando...</div>
+        <div id="insightTextoDashboard">Carregando...</div>
       </div>
 
-      <!-- VOLUME -->
-      <div class="charts-grid" style="grid-template-columns: 1fr">
-        <div class="chart-card full split-card">
-          <div class="split-main">
-            <h3 id="titleVolume">Volume de Chamados por Mês</h3>
-            <div class="chart-divider"></div>
-            <p class="chart-sub" id="subVolume">
+      <!-- ══════════════ VOLUME + CATEGORIAS ══════════════ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div
+          class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row overflow-hidden"
+        >
+          <div class="flex-1 min-w-0 p-6">
+            <h3 id="titleVolume" class="text-sm font-semibold text-slate-800">
+              Volume de Chamados por Mês
+            </h3>
+            <p id="subVolume" class="text-xs text-slate-500 mt-0.5 mb-4">
               Comparativo sazonal do período
             </p>
-            <div class="chart-wrap" style="height: 320px">
+            <div class="relative" style="height: 320px">
               <canvas id="chartEvolucao"></canvas>
             </div>
           </div>
-          <div class="split-side">
-            <div class="split-side-title">Gargalos do Período</div>
-            <div class="chart-divider"></div>
+          <div
+            class="w-full md:w-[280px] md:min-w-[250px] bg-slate-50 md:border-l border-t md:border-t-0 border-gray-100 p-5"
+          >
+            <div class="text-sm font-semibold text-slate-800 mb-3">
+              Gargalos do Período
+            </div>
             <div id="insightLateralOperacional" class="gargalos-text">
               Processando...
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- CATEGORIAS + SLA -->
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h3 id="titleCategorias">Categorias do Período</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub" id="subCategorias">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 id="titleCategorias" class="text-sm font-semibold text-slate-800">
+            Categorias do Período
+          </h3>
+          <p id="subCategorias" class="text-xs text-slate-500 mt-0.5 mb-4">
             Comparativo de volumetria das principais frentes
           </p>
-          <div class="chart-wrap" style="height: 320px">
+          <div class="relative" style="height: 320px">
             <canvas id="chartCategoria"></canvas>
           </div>
         </div>
-        <div class="chart-card">
-          <h3 id="titleSLA">SLA por Mês</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub">
-            % de cumprimento de prazo (Resolvidos + Concluídos) vs Meta (90%)
+      </div>
+
+      <!-- ══════════════ SLA + SATISFAÇÃO + TEMPO MEDIANO ══════════════ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 id="titleSLA" class="text-sm font-semibold text-slate-800">
+            SLA por Mês
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5 mb-4">
+            % de cumprimento de prazo vs Meta (90%)
           </p>
-          <div class="chart-wrap" style="height: 310px">
+          <div class="relative" style="height: 260px">
             <canvas id="chartSLA"></canvas>
           </div>
         </div>
-      </div>
-
-      <!-- SATISFAÇÃO -->
-      <div
-        class="charts-grid"
-        style="grid-template-columns: 1fr; margin-top: 0"
-      >
-        <div class="chart-card full">
-          <h3 id="titleSat">Evolução da Satisfação Média</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub" id="subSat">
-            Comparativo das notas de atendimento entre os períodos
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 id="titleSat" class="text-sm font-semibold text-slate-800">
+            Evolução da Satisfação Média
+          </h3>
+          <p id="subSat" class="text-xs text-slate-500 mt-0.5 mb-4">
+            Notas de atendimento entre os períodos
           </p>
-          <div class="chart-wrap" style="height: 260px">
+          <div class="relative" style="height: 260px">
             <canvas id="chartSat"></canvas>
           </div>
         </div>
-      </div>
-
-      <!-- TEMPO MEDIANO POR MÊS -->
-      <div
-        class="charts-grid"
-        style="grid-template-columns: 1fr; margin-top: 0"
-      >
-        <div class="chart-card full">
-          <h3 id="titleTempo">Tempo Mediano de Resolução por Mês</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub" id="subTempo">
-            Mediana de horas entre abertura e conclusão/resolução
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 id="titleTempo" class="text-sm font-semibold text-slate-800">
+            Tempo Mediano de Resolução por Mês
+          </h3>
+          <p id="subTempo" class="text-xs text-slate-500 mt-0.5 mb-4">
+            Mediana de horas até conclusão/resolução
           </p>
-          <div class="chart-wrap" style="height: 260px">
+          <div class="relative" style="height: 260px">
             <canvas id="chartTempo"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- PERFORMANCE -->
+      <!-- ══════════════ PERFORMANCE DA EQUIPE ══════════════ -->
       <div
-        class="charts-grid"
-        style="grid-template-columns: 1fr; margin-top: 0"
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6"
       >
-        <div class="chart-card full">
-          <h3 id="titlePerf">Performance da Equipe de TI</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub" id="subPerf">
-            Métricas agregadas dos atendimentos no período selecionado
-          </p>
-          <div class="table-scroll">
-            <table class="resp-table">
-              <thead>
-                <tr>
-                  <th>Responsável</th>
-                  <th>Chamados Totais</th>
-                  <th>Volume Relativo</th>
-                  <th>Média Satisfação</th>
-                  <th>No Prazo</th>
-                  <th>SLA Real %</th>
-                </tr>
-              </thead>
-              <tbody id="respBody"></tbody>
-            </table>
-          </div>
+        <h3 id="titlePerf" class="text-sm font-semibold text-slate-800">
+          Performance da Equipe de TI
+        </h3>
+        <p id="subPerf" class="text-xs text-slate-500 mt-0.5 mb-4">
+          Métricas agregadas dos atendimentos no período selecionado
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[560px]">
+            <thead>
+              <tr
+                class="text-left text-[10.5px] uppercase tracking-wide text-slate-400 bg-slate-50"
+              >
+                <th class="px-4 py-2.5 font-semibold rounded-l-lg">
+                  Responsável
+                </th>
+                <th class="px-4 py-2.5 font-semibold">Chamados Totais</th>
+                <th class="px-4 py-2.5 font-semibold">Volume Relativo</th>
+                <th class="px-4 py-2.5 font-semibold">Média Satisfação</th>
+                <th class="px-4 py-2.5 font-semibold">No Prazo</th>
+                <th class="px-4 py-2.5 font-semibold rounded-r-lg">
+                  SLA Real %
+                </th>
+              </tr>
+            </thead>
+            <tbody id="respBody" class="divide-y divide-gray-50"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- ASSUNTOS -->
+      <!-- ══════════════ ASSUNTOS + TEMPO POR ASSUNTO ══════════════ -->
       <div
-        class="charts-grid"
-        style="grid-template-columns: 1fr; margin-top: 0"
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6"
       >
-        <div class="chart-card full">
-          <h3 id="titleAssuntos">Top 10 Assuntos Mais Recorrentes</h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub" id="subAssuntos">
-            Ordenado por volume total · valores no topo de cada barra
-          </p>
-          <div class="chart-wrap xtra" style="min-height: 380px">
-            <canvas id="chartAssunto"></canvas>
-          </div>
+        <h3 id="titleAssuntos" class="text-sm font-semibold text-slate-800">
+          Top 10 Assuntos Mais Recorrentes
+        </h3>
+        <p id="subAssuntos" class="text-xs text-slate-500 mt-0.5 mb-4">
+          Ordenado por volume total · valores no topo de cada barra
+        </p>
+        <div class="relative" style="height: 340px">
+          <canvas id="chartAssunto"></canvas>
+        </div>
+      </div>
+      <div
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6"
+      >
+        <h3 id="titleAssuntoTempo" class="text-sm font-semibold text-slate-800">
+          Tempo Mediano de Resolução por Assuntos
+        </h3>
+        <p id="subAssuntoTempo" class="text-xs text-slate-500 mt-0.5 mb-4">
+          Mediana de horas para os mesmos top 10 assuntos
+        </p>
+        <div class="relative" style="height: 340px">
+          <canvas id="chartAssuntoTempo"></canvas>
         </div>
       </div>
 
-      <!-- TEMPO MEDIANO POR ASSUNTO -->
-      <div
-        class="charts-grid"
-        style="grid-template-columns: 1fr; margin-top: 0"
+      <footer
+        class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 border-t border-gray-100 pt-4 mt-2"
       >
-        <div class="chart-card full">
-          <h3 id="titleAssuntoTempo">
-            Tempo Mediano de Resolução por Assuntos
-          </h3>
-          <div class="chart-divider"></div>
-          <p class="chart-sub" id="subAssuntoTempo">
-            Mediana de horas para os mesmos top 10 assuntos
-          </p>
-          <div class="chart-wrap" style="height: 320px; padding-bottom: 30px">
-            <canvas id="chartAssuntoTempo"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <footer>
         <span
           >Fonte dos dados estruturados:
-          <strong>Sults Corporativo</strong></span
+          <strong class="text-slate-500">Sults Corporativo</strong></span
         >
-        <span>Escopo analítico: <strong id="footerPeriodo">—</strong></span>
+        <span
+          >Escopo analítico:
+          <strong id="footerPeriodo" class="text-slate-500">—</strong></span
+        >
       </footer>
     </div>
+
     <script src="script.js"></script>
   </body>
 </html>

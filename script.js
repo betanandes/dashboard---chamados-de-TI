@@ -544,6 +544,26 @@ Chart.defaults.color = "#8a8a92";
 Chart.defaults.font.family = "Inter, system-ui, sans-serif";
 const grid = "rgba(24,24,27,0.06)";
 
+// Encurta rótulos longos de categoria/assunto SÓ para exibição nos eixos dos
+// gráficos — os textos completos originais continuam intactos em todos os
+// lugares que usam os dados (Análise Dinâmica, tooltips, cálculos etc.),
+// pois esta função só transforma a cópia usada em "labels:" dos charts.
+function encurtarRotulo(nomeOriginal) {
+  const mapa = {
+    "Programas Diversos (S9, Nasajon, Active e etc...)": "Sistemas",
+    "Impressora > Instalação / Reparo Instalação": "Impressoras",
+    "E-mail > Configuração do Outlook": "E-mail",
+    "Suporte > Software": "Softwares",
+    "Suporte > Hardware": "Hardware",
+    "Acesso > Novos Colaboradores": "Acessos",
+  };
+  if (mapa[nomeOriginal]) return mapa[nomeOriginal];
+  // fallback genérico: pega o trecho após o último " > ", remove parênteses
+  // e limita a 2 palavras — cobre rótulos longos que não estão no mapa acima.
+  const base = nomeOriginal.split(" > ").pop().split("(")[0].trim();
+  return base.split(" ").slice(0, 2).join(" ");
+}
+
 const smartDatalabelPlugin = {
   id: "smartDatalabel",
   afterDatasetsDraw(chart) {
@@ -589,14 +609,18 @@ function initCharts(d) {
         {
           label: `Ano ${anoBase}`,
           data: d.volume2025,
-          backgroundColor: "rgba(192,39,45,0.85)",
+          backgroundColor: "rgba(196,30,35,0.85)",
           borderRadius: 3,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7,
         },
         {
           label: `Ano ${anoComp}`,
           data: d.volume2026,
           backgroundColor: "rgba(82,82,91,0.85)",
           borderRadius: 3,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7,
         },
       ],
     },
@@ -622,19 +646,23 @@ function initCharts(d) {
     type: "bar",
     plugins: [smartDatalabelPlugin],
     data: {
-      labels: cs.map((c) => c.n),
+      labels: cs.map((c) => encurtarRotulo(c.n)),
       datasets: [
         {
           label: `${anoBase}`,
           data: cs.map((c) => c.v25),
-          backgroundColor: "#c0272d",
+          backgroundColor: "#C41E23",
           borderRadius: 2,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7,
         },
         {
           label: `${anoComp}`,
           data: cs.map((c) => c.v26),
           backgroundColor: "#3f3f46",
           borderRadius: 2,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7,
         },
       ],
     },
@@ -667,12 +695,12 @@ function initCharts(d) {
         {
           label: `SLA ${anoBase}`,
           data: slaBase,
-          borderColor: "#c0272d",
+          borderColor: "#C41E23",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
-          pointBackgroundColor: "#c0272d",
+          pointBackgroundColor: "#C41E23",
           spanGaps: false,
         },
         {
@@ -689,7 +717,7 @@ function initCharts(d) {
         {
           label: "Meta 90%",
           data: Array(meses.length).fill(90),
-          borderColor: "#b07d2a",
+          borderColor: "#d97706",
           backgroundColor: "transparent",
           borderWidth: 2,
           pointRadius: 0,
@@ -738,21 +766,18 @@ function initCharts(d) {
             meta.data.forEach((point, i) => {
               const v = ds.data[i];
               if (v == null || v === undefined) return;
-              const label = v.toFixed(1) + "%",
-                yPos = point.y - 18;
+              const label = v.toFixed(1) + "%";
               ctx.save();
-              const tw = ctx.measureText(label).width + 10,
-                th = 14;
-              ctx.fillStyle =
-                di === 0 ? "rgba(192,39,45,0.12)" : "rgba(82,82,91,0.12)";
-              ctx.beginPath();
-              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
-              ctx.fill();
-              ctx.font = "bold 10px Inter, system-ui, sans-serif";
+              ctx.font = "600 10px Inter, system-ui, sans-serif";
               ctx.fillStyle = ds.borderColor;
               ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(label, point.x, yPos);
+              if (di === 0) {
+                ctx.textBaseline = "bottom";
+                ctx.fillText(label, point.x, point.y - 8);
+              } else {
+                ctx.textBaseline = "top";
+                ctx.fillText(label, point.x, point.y + 8);
+              }
               ctx.restore();
             });
           });
@@ -769,7 +794,7 @@ function initCharts(d) {
         {
           label: `Nota ${anoBase}`,
           data: d.sat2025,
-          borderColor: "#c0272d",
+          borderColor: "#C41E23",
           backgroundColor: "transparent",
           borderWidth: 2,
           tension: 0.2,
@@ -855,12 +880,12 @@ function initCharts(d) {
         {
           label: `Tempo ${anoBase}`,
           data: tempoBase,
-          borderColor: "#c0272d",
+          borderColor: "#C41E23",
           backgroundColor: "transparent",
           borderWidth: 2.5,
           tension: 0.2,
           pointRadius: 4,
-          pointBackgroundColor: "#c0272d",
+          pointBackgroundColor: "#C41E23",
           spanGaps: false,
         },
         {
@@ -917,21 +942,18 @@ function initCharts(d) {
             meta.data.forEach((point, i) => {
               const v = ds.data[i];
               if (v == null || v === undefined) return;
-              const label = v.toFixed(1) + "h",
-                yPos = point.y - 18;
+              const label = v.toFixed(1) + "h";
               ctx.save();
-              const tw = ctx.measureText(label).width + 10,
-                th = 14;
-              ctx.fillStyle =
-                di === 0 ? "rgba(192,39,45,0.12)" : "rgba(82,82,91,0.12)";
-              ctx.beginPath();
-              ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
-              ctx.fill();
-              ctx.font = "bold 10px Inter, system-ui, sans-serif";
+              ctx.font = "600 10px Inter, system-ui, sans-serif";
               ctx.fillStyle = ds.borderColor;
               ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(label, point.x, yPos);
+              if (di === 0) {
+                ctx.textBaseline = "bottom";
+                ctx.fillText(label, point.x, point.y - 8);
+              } else {
+                ctx.textBaseline = "top";
+                ctx.fillText(label, point.x, point.y + 8);
+              }
               ctx.restore();
             });
           });
@@ -947,19 +969,23 @@ function initCharts(d) {
     type: "bar",
     plugins: [smartDatalabelPlugin],
     data: {
-      labels: at.map((a) => a.label),
+      labels: at.map((a) => encurtarRotulo(a.label)),
       datasets: [
         {
           label: `Ano ${anoBase}`,
           data: at.map((a) => a.v2025),
-          backgroundColor: "rgba(192,39,45,0.8)",
+          backgroundColor: "rgba(196,30,35,0.8)",
           borderRadius: 3,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7,
         },
         {
           label: `Ano ${anoComp}`,
           data: at.map((a) => a.v2026),
           backgroundColor: "#3f3f46",
           borderRadius: 3,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7,
         },
       ],
     },
@@ -984,7 +1010,7 @@ function initCharts(d) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { font: { size: 10 }, maxRotation: 30, minRotation: 20 },
+          ticks: { font: { size: 10 }, maxRotation: 22, minRotation: 12 },
         },
         y: { grid: { color: grid }, beginAtZero: true },
       },
@@ -1002,17 +1028,17 @@ function initCharts(d) {
     {
       type: "line",
       data: {
-        labels: atTempo.map((a) => a.label),
+        labels: atTempo.map((a) => encurtarRotulo(a.label)),
         datasets: [
           {
             label: `Ano ${anoBase}`,
             data: assTempoBase,
-            borderColor: "#c0272d",
+            borderColor: "#C41E23",
             backgroundColor: "transparent",
             borderWidth: 2.5,
             tension: 0.2,
             pointRadius: 4,
-            pointBackgroundColor: "#c0272d",
+            pointBackgroundColor: "#C41E23",
             spanGaps: false,
           },
           {
@@ -1051,7 +1077,7 @@ function initCharts(d) {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { font: { size: 10 }, maxRotation: 35, minRotation: 20 },
+            ticks: { font: { size: 10 }, maxRotation: 22, minRotation: 12 },
           },
           y: {
             grid: { color: grid },
@@ -1072,21 +1098,18 @@ function initCharts(d) {
               meta.data.forEach((point, i) => {
                 const v = ds.data[i];
                 if (v == null || v === undefined) return;
-                const label = v.toFixed(1) + "h",
-                  yPos = point.y - 18;
+                const label = v.toFixed(1) + "h";
                 ctx.save();
-                const tw = ctx.measureText(label).width + 10,
-                  th = 14;
-                ctx.fillStyle =
-                  di === 0 ? "rgba(192,39,45,0.12)" : "rgba(82,82,91,0.12)";
-                ctx.beginPath();
-                ctx.roundRect(point.x - tw / 2, yPos - th / 2, tw, th, 4);
-                ctx.fill();
-                ctx.font = "bold 10px Inter, system-ui, sans-serif";
+                ctx.font = "600 10px Inter, system-ui, sans-serif";
                 ctx.fillStyle = ds.borderColor;
                 ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(label, point.x, yPos);
+                if (di === 0) {
+                  ctx.textBaseline = "bottom";
+                  ctx.fillText(label, point.x, point.y - 8);
+                } else {
+                  ctx.textBaseline = "top";
+                  ctx.fillText(label, point.x, point.y + 8);
+                }
                 ctx.restore();
               });
             });
@@ -1101,16 +1124,37 @@ function renderTabela(responsaveis) {
   const maxTotal = Math.max(...responsaveis.map((r) => r.total));
   const tbody = document.getElementById("respBody");
   tbody.innerHTML = "";
-  responsaveis.forEach((r) => {
+  responsaveis.forEach((r, idx) => {
     const pct = ((r.noPrazo / r.total) * 100).toFixed(1),
-      slaCls = pct >= 90 ? "sla-high" : pct >= 60 ? "sla-mid" : "sla-low";
+      slaCls =
+        pct >= 90
+          ? "bg-green-50 text-green-700"
+          : pct >= 60
+            ? "bg-amber-50 text-amber-700"
+            : "bg-red-50 text-red-700";
     const barW = Math.round((r.total / maxTotal) * 100),
       stars =
         "★".repeat(Math.round(r.nota || 0)) +
         "☆".repeat(5 - Math.round(r.nota || 0));
+    const zebra = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
     tbody.insertAdjacentHTML(
       "beforeend",
-      `<tr><td class="name-cell">${r.nome}</td><td><strong>${r.total}</strong></td><td class="bar-cell"><div class="mini-bar-wrap"><div class="mini-bar" style="width:${barW}%"></div></div></td><td class="star-cell">${stars} <span style="color:var(--muted);font-size:11px;">${(r.nota || 0).toFixed(2)}</span></td><td style="color:var(--text2)">${r.noPrazo}</td><td><span class="sla-badge ${slaCls}">${pct}%</span></td></tr>`,
+      `<tr class="${zebra} hover:bg-red-50/40 transition-colors">
+        <td class="px-4 py-3 text-sm font-medium text-slate-800">${r.nome}</td>
+        <td class="px-4 py-3 text-sm font-semibold text-slate-800">${r.total}</td>
+        <td class="px-4 py-3">
+          <div class="w-full max-w-[110px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-red-700 rounded-full" style="width:${barW}%"></div>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-sm text-amber-400">
+          ${stars} <span class="text-slate-400 text-xs">${(r.nota || 0).toFixed(2)}</span>
+        </td>
+        <td class="px-4 py-3 text-sm text-slate-600">${r.noPrazo}</td>
+        <td class="px-4 py-3">
+          <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${slaCls}">${pct}%</span>
+        </td>
+      </tr>`,
     );
   });
 }
@@ -1198,6 +1242,56 @@ function _classificarSLA(v) {
     texto: "abaixo da meta e requer atenção da gestão",
     cor: "var(--accent3)",
   };
+}
+
+// ── Central de Alertas e Insights — helpers visuais ────────────────────────
+// Mapeia a MESMA cor já calculada por _classificarVariacao/_classificarSLA
+// (var(--accent3)=crítico, var(--accent5)=atenção, var(--accent4)=positivo)
+// para um "tipo" de card. Nenhum dado novo é criado aqui — só a apresentação.
+function _tipoPorCor(cor) {
+  if (cor === "var(--accent3)") return "alerta";
+  if (cor === "var(--accent5)") return "atencao";
+  if (cor === "var(--accent4)") return "positivo";
+  return "info";
+}
+
+const _iconesInsight = {
+  alerta: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  atencao: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  positivo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`,
+  info: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+};
+
+const _estiloInsight = {
+  alerta: {
+    border: "border-red-500",
+    bg: "bg-red-50/30",
+    icon: "text-red-600",
+  },
+  atencao: {
+    border: "border-amber-400",
+    bg: "bg-amber-50/30",
+    icon: "text-amber-500",
+  },
+  positivo: {
+    border: "border-green-500",
+    bg: "bg-green-50/30",
+    icon: "text-green-600",
+  },
+  info: {
+    border: "border-slate-300",
+    bg: "bg-slate-50/60",
+    icon: "text-slate-400",
+  },
+};
+
+function cardInsight(tipo, html) {
+  const e = _estiloInsight[tipo] || _estiloInsight.info;
+  const icone = _iconesInsight[tipo] || _iconesInsight.info;
+  return `<div class="flex items-start gap-3 bg-white border border-gray-100 border-l-4 ${e.border} ${e.bg} rounded-lg px-4 py-3">
+    <span class="shrink-0 mt-0.5 ${e.icon}">${icone}</span>
+    <div class="text-[13px] leading-relaxed text-slate-700">${html}</div>
+  </div>`;
 }
 
 function calcularInsights(d) {
@@ -1290,34 +1384,57 @@ function calcularInsights(d) {
     const linhas = [];
 
     linhas.push(
-      `🔹 <strong>Volume:</strong> ${tBase.toLocaleString("pt-BR")} chamados em ${meses[0]}–${meses[meses.length - 1]} ${anoBase}${tComp ? ` (vs ${tComp.toLocaleString("pt-BR")} em ${anoComp})` : ""} — <strong style="color:${variacao.cor}">${variacao.texto}</strong>${tComp ? ` de ${Math.abs(varPct)}%` : ""}.`,
+      cardInsight(
+        _tipoPorCor(variacao.cor),
+        `<strong>Volume:</strong> ${tBase.toLocaleString("pt-BR")} chamados em ${meses[0]}–${meses[meses.length - 1]} ${anoBase}${tComp ? ` (vs ${tComp.toLocaleString("pt-BR")} em ${anoComp})` : ""} — <strong style="color:${variacao.cor}">${variacao.texto}</strong>${tComp ? ` de ${Math.abs(varPct)}%` : ""}.`,
+      ),
     );
 
     if (catLider && catLider.vBase > 0) {
       linhas.push(
-        `🔹 <strong>Categoria líder:</strong> <strong style="color:var(--accent)">"${catLider.nome}"</strong> concentra <strong>${catShare}%</strong> do volume (${catLider.vBase} chamados)${assTop && assTop.v2025 > 0 ? `; o assunto mais recorrente é <strong>"${assTop.label}"</strong> (${assTop.v2025} chamados)` : ""}.`,
+        cardInsight(
+          "info",
+          `<strong>Categoria líder:</strong> <strong style="color:var(--accent)">"${catLider.nome}"</strong> concentra <strong>${catShare}%</strong> do volume (${catLider.vBase} chamados)${assTop && assTop.v2025 > 0 ? `; o assunto mais recorrente é <strong>"${assTop.label}"</strong> (${assTop.v2025} chamados)` : ""}.`,
+        ),
       );
     }
 
     if (temCrescimentoRelevante) {
       linhas.push(
-        `🔹 <strong>Alerta de demanda:</strong> <strong style="color:var(--accent3)">"${catCresceu.nome}"</strong> cresceu <strong>+${catCresceu.g}%</strong> frente a ${anoComp} (${catCresceu.vC} → ${catCresceu.vB} chamados) — merece investigação de causa raiz.`,
+        cardInsight(
+          "alerta",
+          `<strong>Alerta de demanda:</strong> <strong style="color:var(--accent3)">"${catCresceu.nome}"</strong> cresceu <strong>+${catCresceu.g}%</strong> frente a ${anoComp} (${catCresceu.vC} → ${catCresceu.vB} chamados) — merece investigação de causa raiz.`,
+        ),
       );
     }
 
     linhas.push(
-      `🔹 <strong>Sazonalidade:</strong> <strong>${mesMax.mes}</strong> concentrou o maior volume (${mesMax.v} chamados); <strong>${mesMin.mes}</strong> teve o menor (${mesMin.v}).`,
+      cardInsight(
+        "info",
+        `<strong>Sazonalidade:</strong> <strong>${mesMax.mes}</strong> concentrou o maior volume (${mesMax.v} chamados); <strong>${mesMin.mes}</strong> teve o menor (${mesMin.v}).`,
+      ),
     );
 
     linhas.push(
-      `🔹 <strong>SLA:</strong> <strong style="color:${slaStatus.cor};font-weight:bold">${(d.slaGlobal || 0).toFixed(1)}%</strong> — ${slaStatus.texto}${slaTendenciaTxt ? `, com ${slaTendenciaTxt}` : ""}.`,
+      cardInsight(
+        _tipoPorCor(slaStatus.cor),
+        `<strong>SLA:</strong> <strong style="color:${slaStatus.cor};font-weight:bold">${(d.slaGlobal || 0).toFixed(1)}%</strong> — ${slaStatus.texto}${slaTendenciaTxt ? `, com ${slaTendenciaTxt}` : ""}.`,
+      ),
     );
 
+    const tipoSatTempo = satTendenciaTxt.includes("queda")
+      ? "alerta"
+      : satTendenciaTxt.includes("melhora")
+        ? "positivo"
+        : "info";
     linhas.push(
-      `🔹 <strong>Satisfação e Tempo de Resposta:</strong> nota média ${satBase != null ? satBase.toFixed(2) : "—"}${satTendenciaTxt ? ` (${satTendenciaTxt})` : ""}; tempo mediano de resolução em <strong>${(d.tempoMediano || 0).toFixed(1)}h</strong>${tempoPico ? `, com pico em <strong>${tempoPico.mes}</strong> (${tempoPico.v.toFixed(1)}h)` : ""}.`,
+      cardInsight(
+        tipoSatTempo,
+        `<strong>Satisfação e Tempo de Resposta:</strong> nota média ${satBase != null ? satBase.toFixed(2) : "—"}${satTendenciaTxt ? ` (${satTendenciaTxt})` : ""}; tempo mediano de resolução em <strong>${(d.tempoMediano || 0).toFixed(1)}h</strong>${tempoPico ? `, com pico em <strong>${tempoPico.mes}</strong> (${tempoPico.v.toFixed(1)}h)` : ""}.`,
+      ),
     );
 
-    c.innerHTML = `<div style="display:flex;flex-direction:column;gap:9px;">${linhas.map((l) => `<div>${l}</div>`).join("")}</div>`;
+    c.innerHTML = `<div class="insight-grid">${linhas.join("")}</div>`;
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1397,7 +1514,7 @@ function configurarImportacao() {
   input.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    status.textContent = "⏳ Processando planilha...";
+    status.textContent = "Processando planilha...";
     status.style.color = "var(--muted)";
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -1408,17 +1525,17 @@ function configurarImportacao() {
         });
         const dados = processarPlanilha(wb);
         if (!dados) {
-          status.textContent = "❌ Planilha inválida ou sem dados no período.";
+          status.textContent = "Planilha inválida ou sem dados no período.";
           status.style.color = "var(--accent3)";
           return;
         }
         dadosAtivos = dados;
         renderDashboard(dados);
-        status.textContent = `✅ Importado — ${dados.totalFiltro} chamados.`;
+        status.textContent = `Importado — ${dados.totalFiltro} chamados.`;
         status.style.color = "var(--accent4)";
         document.getElementById("nomeArquivo").textContent = file.name;
       } catch (err) {
-        status.textContent = "❌ Erro: " + err.message;
+        status.textContent = "Erro: " + err.message;
         status.style.color = "var(--accent3)";
       }
     };
@@ -1441,18 +1558,18 @@ function configurarGoogleSheets() {
     try {
       const dados = await buscarPlanilhaGoogleSheets();
       if (!dados) {
-        status.textContent = "❌ Planilha sem dados no período selecionado.";
+        status.textContent = "Planilha sem dados no período selecionado.";
         status.style.color = "var(--accent3)";
         return;
       }
       dadosAtivos = dados;
       renderDashboard(dados);
       const agora = new Date().toLocaleString("pt-BR");
-      status.textContent = `✅ ${dados.totalFiltro} chamados · Atualizado em ${agora}`;
+      status.textContent = `${dados.totalFiltro} chamados · Atualizado em ${agora}`;
       status.style.color = "var(--accent4)";
       nome.textContent = `Google Sheets · ${agora}`;
     } catch (err) {
-      status.textContent = `❌ Erro: ${err.message}`;
+      status.textContent = `Erro: ${err.message}`;
       status.style.color = "var(--accent3)";
     } finally {
       btn.disabled = false;
@@ -1480,7 +1597,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const status = document.getElementById("statusImport");
       if (dadosAtivos) {
         status.textContent =
-          "⚠️ Período alterado — clique em 'Atualizar da Planilha' para atualizar.";
+          "Período alterado — clique em 'Atualizar da Planilha' para atualizar.";
         status.style.color = "var(--accent5)";
       }
     });
